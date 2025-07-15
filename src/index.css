@@ -1,0 +1,194 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  /* use the full viewport height */
+  background-color: #000;
+  /* your desired background */
+  overflow: hidden;
+  /* lock scrolling on the outer document */
+}
+
+.hide-scrollbar {
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* For Firefox */
+  scrollbar-width: none;
+  /* For Internet Explorer 10+ */
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes float {
+  0% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-50vw);
+  }
+
+  75% {
+    transform: translateX(50vw);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-float {
+  animation: float 80s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #31F46E, #0AFDE1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #31F46E80, #0AFDE180);
+}
+
+@keyframes pop-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* TON Connect Button Styles */
+button.go3974562317:not([data-tc-dropdown-button]) {
+  background: linear-gradient(to right, #31F46E, #0AFDE1) !important;
+  color: #000000 !important;
+  border: none !important;
+  font-weight: 500 !important;
+}
+
+.connect-wallet {
+  background: linear-gradient(to right, #31F46E, #0AFDE1) !important;
+  color: #000000 !important;
+  border: none !important;
+  font-weight: 500 !important;
+}
+
+button.go3974562317:not([data-tc-dropdown-button])>svg path {
+  fill: #000000 !important;
+}
+
+button.go3974562317:not([data-tc-dropdown-button])>div {
+  color: #000000 !important;
+  box-shadow: none !important;
+  font-weight: 600;
+}
+
+/* Dropdown Button Styles */
+button.go3974562317[data-tc-dropdown-button] {
+  background: #0000004a !important;
+  border: 1px solid #ffffff24 !important;
+}
+
+/* Dropdown Button Styles */
+button.go3974562317[data-tc-dropdown-button]>.go1140934594 {
+  color: white !important;
+}
+
+/* Dropdown Container Position */
+[data-tc-dropdown-container="true"] {
+  left: 14px !important;
+}
+
+.input-level>div>div>div>input {
+  color: white !important;
+}
+
+.data-\[hover\=true\]\:bg-default-200[data-hover="true"] {
+  --tw-bg-opacity: 1;
+  background-color: #ffffff00 !important;
+}
+
+.group[data-focus="true"] .group-data-\[focus\=true\]\:bg-default-100 {
+  background-color: #ffffff00 !important;
+}
+
+/* Animation keyframes for the TrendingTokens and TokenInfo components */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+/* Ensure the animations work properly in the drawer context */
+.drawer-animation-container {
+  position: relative;
+  z-index: 10;
+}
+
+/* Chat prefill options animation */
+@keyframes prefillFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-prefill-fade-up {
+  opacity: 0;
+  animation: prefillFadeUp 0.4s ease forwards;
+}
