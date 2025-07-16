@@ -1,12 +1,12 @@
 import { useState, useRef, forwardRef, useImperativeHandle } from 'react';
-import { Input, Dropdown, DropdownTrigger, DropdownMenu, DropdownSection, DropdownItem } from "@heroui/react";
-import { Send } from 'lucide-react';
+import { Input } from "@heroui/react";
+import { Send, X } from 'lucide-react';
 import PropTypes from 'prop-types';
 import Button from './Button';
 import { agents } from '../../utils/agentData';
 import { MicrophoneRecorder } from './microphone';
 
-const ChatInput = forwardRef(({ onSendMessage, onAudioRecorded, onAgentMessage, disabled }, ref) => {
+const ChatInput = forwardRef(({ onSendMessage, onAudioRecorded, onAgentMessage, onCancel, disabled }, ref) => {
   const [message, setMessage] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [filteredAgents, setFilteredAgents] = useState(agents);
@@ -77,174 +77,121 @@ const ChatInput = forwardRef(({ onSendMessage, onAudioRecorded, onAgentMessage, 
   };
 
   return (
-    <div className={`w-full border-t duration-250 border-[#fff]/10 border-solid ${isRecording ? 'py-3 px-2' : 'py-4 px-4'}`}>
-      <form onSubmit={handleSubmit} className="flex duration-250 flex-col gap-3">
-        <div className="flex items-center duration-250 gap-2 relative">
-          <div className={`flex-1 duration-250 relative ${isRecording ? 'hidden' : ''}`}>
-            <div className="flex flex-col items-start duration-250 gap-2 w-full">
+    <div className={`w-full border-t duration-300 border-[#fff]/20 border-solid ${isRecording ? 'py-3 px-2' : 'py-4 px-4'}`}>
+      <form onSubmit={handleSubmit} className="flex duration-300 flex-col gap-3">
+        <div className="flex items-center duration-300 gap-2 relative">
+          <div className={`flex-1 duration-300 relative ${isRecording ? 'hidden' : ''}`}>
+            <div className="flex flex-col items-start duration-300 gap-3 w-full">
               {selectedAgent && (
-                <div className="flex items-center gap-1  bg-[#31F46E]/15 rounded-full px-3 py-1.5 transition-all">
-                  <span className="text-[#31F46E] text-xs font-medium">@{selectedAgent.agent_name}</span>
+                <div className="flex items-center gap-2 bg-gradient-to-r from-[#31F46E]/20 to-[#0AFDE1]/20 backdrop-blur-sm rounded-full px-4 py-2 border border-[#31F46E]/30 transition-all hover:from-[#31F46E]/30 hover:to-[#0AFDE1]/30">
+                  <div className="w-2 h-2 bg-[#31F46E] rounded-full animate-pulse"></div>
+                  <span className="text-[#31F46E] text-sm font-medium">@{selectedAgent.agent_name}</span>
                   <button
                     type="button"
                     onClick={removeAgent}
-                    className="text-[#31F46E]/70 hover:text-[#31F46E] ml-1 rounded-full w-4 h-4 flex items-center justify-center"
+                    className="text-[#31F46E]/70 hover:text-[#31F46E] ml-1 rounded-full w-5 h-5 flex items-center justify-center transition-all hover:bg-[#31F46E]/20"
                     disabled={disabled}
                   >
                     ×
                   </button>
                 </div>
               )}
-              <Input
-                ref={inputRef}
-                type="text"
-                variant="bordered"
-                radius="full"
-                size="lg"
-                placeholder="Type @ to mention an agent..."
-                value={message}
-                onValueChange={handleInputChange}
-                classNames={{
-                  input: "bg-transparent py-2",
-                  innerWrapper: "bg-transparent",
-                  inputWrapper: [
-                    "bg-[#1D2530]",
-                    "hover:bg-[#1D2530]",
-                    "group-data-[focused=true]:bg-[#1D2530]",
-                    "!cursor-text",
-                    "border-none",
-                    "shadow-sm",
-                    "transition-all",
-                    "min-h-[48px]"
-                  ]
-                }}
-              />
+              <div className="w-full relative group">
+                <Input
+                  ref={inputRef}
+                  type="text"
+                  variant="bordered"
+                  radius="lg"
+                  size="lg"
+                  placeholder="Ask Olivia anything... Type @ to mention agents"
+                  value={message}
+                  onValueChange={handleInputChange}
+                  classNames={{
+                    input: "bg-transparent py-3 text-white placeholder:text-gray-400 text-base",
+                    innerWrapper: "bg-transparent",
+                    inputWrapper: [
+                      "bg-gradient-to-r from-[#1a1f2e] to-[#1e2532]",
+                      "hover:from-[#1f2437] hover:to-[#232a39]",
+                      "group-data-[focused=true]:from-[#242b3a] group-data-[focused=true]:to-[#28303f]",
+                      "!cursor-text",
+                      "border-[#fff]/10",
+                      "group-data-[focused=true]:border-[#31F46E]/50",
+                      "hover:border-[#fff]/20",
+                      "shadow-lg",
+                      "backdrop-blur-sm",
+                      "transition-all duration-300",
+                      "min-h-[56px]",
+                      "group-data-[focused=true]:shadow-lg",
+                      "group-data-[focused=true]:shadow-[#31F46E]/20"
+                    ]
+                  }}
+                />
+                {/* Focus ring effect */}
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#31F46E]/10 to-[#0AFDE1]/10 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none -z-10"></div>
+              </div>
             </div>
 
             {showAgentDropdown && (
-              <div className="absolute bottom-full left-0 mb-2 w-56 bg-gray-900/95 py-2 px-1 rounded-xl shadow-xl border border-gray-700/50 backdrop-blur-sm overflow-hidden z-[9999]">
-                {(() => {
-                  const agentsByType = filteredAgents.reduce((acc, agent) => {
-                    if (!acc[agent.type]) {
-                      acc[agent.type] = {
-                        type_name: agent.type_name,
-                        agents: [],
-                      };
-                    }
-                    acc[agent.type].agents.push(agent);
-                    return acc;
-                  }, {});
+              <div className="absolute bottom-full left-0 mb-3 w-64 bg-gradient-to-b from-[#1a1f2e] to-[#1e2532] py-3 px-2 rounded-xl shadow-2xl border border-[#fff]/10 backdrop-blur-lg overflow-hidden z-[9999] animate-in slide-in-from-bottom-2 fade-in-0 duration-200">
+                {/* Gradient border effect */}
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#31F46E]/20 to-[#0AFDE1]/20 opacity-50 blur-sm"></div>
+                <div className="relative">
+                  {(() => {
+                    const agentsByType = filteredAgents.reduce((acc, agent) => {
+                      if (!acc[agent.type]) {
+                        acc[agent.type] = {
+                          type_name: agent.type_name,
+                          agents: [],
+                        };
+                      }
+                      acc[agent.type].agents.push(agent);
+                      return acc;
+                    }, {});
 
-                  return Object.entries(agentsByType).map(([type, { type_name, agents: typeAgents }]) =>
-                    typeAgents.length > 0 && (
-                      <div key={type}>
-                        <div className="px-2 py-1.5 text-[12px] font-semibold text-[#71717A]">
-                          {type_name}
+                    return Object.entries(agentsByType).map(([type, { type_name, agents: typeAgents }]) =>
+                      typeAgents.length > 0 && (
+                        <div key={type} className="mb-3 last:mb-0">
+                          <div className="px-3 py-2 text-xs font-semibold text-[#31F46E]/80 uppercase tracking-wide border-b border-[#fff]/5 mb-2">
+                            {type_name}
+                          </div>
+                          {typeAgents.map((agent) => {
+                            const Icon = agent.icon;
+                            return (
+                              <button
+                                key={agent.agent_id}
+                                type="button"
+                                onClick={() => handleAgentSelect(agent.agent_id)}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gradient-to-r hover:from-[#31F46E]/10 hover:to-[#0AFDE1]/10 text-gray-300 hover:text-white transition-all duration-200 group"
+                                disabled={disabled}
+                              >
+                                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#31F46E]/20 group-hover:bg-[#31F46E]/30 transition-colors">
+                                  {typeof agent.icon === "string" ? (
+                                    <img
+                                      src={agent.icon}
+                                      alt={agent.agent_name}
+                                      className="w-3 h-3"
+                                    />
+                                  ) : (
+                                    <Icon className="w-3 h-3 text-[#31F46E] group-hover:text-[#0AFDE1]" />
+                                  )}
+                                </div>
+                                <span className="text-sm font-medium group-hover:text-white transition-colors">
+                                  {agent.agent_name}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
-                        {typeAgents.map((agent) => {
-                          const Icon = agent.icon;
-                          return (
-                            <button
-                              key={agent.agent_id}
-                              type="button"
-                              onClick={() => handleAgentSelect(agent.agent_id)}
-                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 text-gray-300 hover:text-gray-100"
-                              disabled={disabled}
-                            >
-                              {typeof agent.icon === "string" ? (
-                                <img
-                                  src={agent.icon}
-                                  alt={agent.agent_name}
-                                  className="w-[16px] h-[16px]"
-                                />
-                              ) : (
-                                <Icon className="w-[16px] h-[16px] text-[#9ca3af] opacity-60" />
-                              )}
-                              <span className="text-[#D1D5DB] text-[14px]">
-                                {agent.agent_name}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )
-                  );
-                })()}
+                      )
+                    );
+                  })()}
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex justify-between items-center gap-3">
-          {!isRecording &&
-            <Dropdown className={`bg-gray-900/95 backdrop-blur-sm ${isRecording ? 'hidden' : ''}`} backdrop="opaque">
-              <DropdownTrigger>
-                <Button
-                  variant="bordered"
-                  className="text-gray-300 border-gray-600/50 h-11 rounded-full hover:bg-gray-800/30 transition-all"
-                  disabled={disabled}
-                >
-                  <div className="text-sm flex justify-start items-center gap-2">
-                    <img
-                      src="/Olivia-ai-LOGO.png"
-                      alt="Olivia AI"
-                      className="w-auto h-5"
-                    />
-                    <span className="font-medium">Agents</span>
-                  </div>
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                aria-label="Agent Actions"
-                variant="shadow"
-                className="bg-gray-900/95 backdrop-blur-sm"
-                itemClasses={{
-                  base: "text-gray-300 data-[hover=true]:bg-gray-800/80 data-[hover=true]:text-gray-100 data-[hover=true]:shadow-none transition-colors",
-                }}
-              >
-                {(() => {
-                  const agentsByType = agents.reduce((acc, agent) => {
-                    if (!acc[agent.type]) {
-                      acc[agent.type] = {
-                        type_name: agent.type_name,
-                        agents: [],
-                      };
-                    }
-                    acc[agent.type].agents.push(agent);
-                    return acc;
-                  }, {});
-
-                  return Object.entries(agentsByType).map(([type, { type_name, agents: typeAgents }]) => (
-                    <DropdownSection key={type} title={type_name}>
-                      {typeAgents.map((agent) => {
-                        const Icon = agent.icon;
-                        return (
-                          <DropdownItem
-                            key={agent.agent_id}
-                            onPress={() => handleAgentSelect(agent.agent_id)}
-                            startContent={
-                              typeof agent.icon === "string" ? (
-                                <img
-                                  src={agent.icon}
-                                  alt={agent.agent_name}
-                                  className="w-4 h-4 opacity-60"
-                                />
-                              ) : (
-                                <Icon className="w-4 h-4 text-gray-400" />
-                              )
-                            }
-                            isDisabled={disabled}
-                          >
-                            {agent.agent_name}
-                          </DropdownItem>
-                        );
-                      })}
-                    </DropdownSection>
-                  ));
-                })()}
-              </DropdownMenu>
-            </Dropdown>
-          }
+        <div className="flex justify-end items-center gap-3">
           <div className={`flex items-center gap-3  ${isRecording ? "w-full": ""}`}>
             {/* <MicrophoneRecorder
               onAudioRecorded={onAudioRecorded}
@@ -252,20 +199,34 @@ const ChatInput = forwardRef(({ onSendMessage, onAudioRecorded, onAgentMessage, 
               disabled={disabled}
             /> */}
             {!isRecording && (
-              <Button
-                type="submit"
-                variant="light"
-                isIconOnly
-                className={`min-w-unit-12 w-12 h-12 p-0 rounded-full transition-all ${
-                  !message.trim() || disabled 
-                    ? 'opacity-40 cursor-not-allowed' 
-                    : 'hover:scale-105 active:scale-95'
-                }`}
-                disabled={!message.trim() || disabled}
-                onPress={handleSubmit}
-              >
-                <Send className={`w-5 h-5 ${!message.trim() || disabled ? 'text-gray-400' : 'text-[#31F46E] hover:text-[#31F46E]/80'}`} />
-              </Button>
+              <>
+                {disabled && onCancel ? (
+                  <Button
+                    type="button"
+                    variant="light"
+                    isIconOnly
+                    className="min-w-unit-12 w-12 h-12 p-0 rounded-full transition-all hover:scale-105 active:scale-95 hover:bg-red-500/20"
+                    onPress={onCancel}
+                  >
+                    <X className="w-5 h-5 text-red-400 hover:text-red-300" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    variant="light"
+                    isIconOnly
+                    className={`min-w-unit-12 w-12 h-12 p-0 rounded-full transition-all ${
+                      !message.trim() || disabled 
+                        ? 'opacity-40 cursor-not-allowed' 
+                        : 'hover:scale-105 active:scale-95 hover:bg-gradient-to-r hover:from-[#31F46E]/20 hover:to-[#0AFDE1]/20'
+                    }`}
+                    disabled={!message.trim() || disabled}
+                    onPress={handleSubmit}
+                  >
+                    <Send className={`w-5 h-5 transition-colors ${!message.trim() || disabled ? 'text-gray-400' : 'text-[#31F46E] hover:text-[#0AFDE1]'}`} />
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -278,12 +239,14 @@ ChatInput.propTypes = {
   onSendMessage: PropTypes.func.isRequired,
   onAudioRecorded: PropTypes.func,
   onAgentMessage: PropTypes.func,
+  onCancel: PropTypes.func,
   disabled: PropTypes.bool,
 };
 
 ChatInput.defaultProps = {
   onAudioRecorded: () => {},
   onAgentMessage: () => {},
+  onCancel: null,
   disabled: false,
 };
 

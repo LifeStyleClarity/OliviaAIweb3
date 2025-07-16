@@ -6,17 +6,26 @@ import App from './App.jsx'
 import React from 'react'
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { ChatProvider } from './contexts/ChatContext.jsx'
+import { WebSocketProvider } from './contexts/WebSocketContext.jsx'
 
-import ChatModal from './components/ui/ChatModal.jsx'
+import ConditionalChatModal from './components/ui/ConditionalChatModal.jsx'
 import { AuthProviderLogin } from './contexts/AuthContext.jsx'
 import { TokenInfluencerProvider } from './contexts/TokenInfluencerContext.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 import TelegramAnalytics from '@telegram-apps/analytics'
 
-TelegramAnalytics.init({
-  token: import.meta.env.VITE_TG_ANAL_TOKEN,
-  appName: import.meta.env.VITE_TG_ANAL_APP_NAME,
-});
+// Only initialize Telegram analytics if running inside Telegram
+if (window.Telegram?.WebApp) {
+  try {
+    TelegramAnalytics.init({
+      token: import.meta.env.VITE_TG_ANAL_TOKEN,
+      appName: import.meta.env.VITE_TG_ANAL_APP_NAME,
+    });
+  } catch (error) {
+    console.log('Telegram analytics not available in browser environment');
+  }
+}
 
 
 createRoot(document.getElementById('root')).render(
@@ -25,14 +34,18 @@ createRoot(document.getElementById('root')).render(
       <TonConnectUIProvider manifestUrl="https://app.olivianetwork.com/tonconnect-manifest.json">
         <BrowserRouter>
           <AuthProviderLogin>
-            <ChatProvider>
-              <TokenInfluencerProvider>
-                <main className="dark text-foreground bg-background">
-                  <ChatModal />
-                  <App />
-                </main>
-              </TokenInfluencerProvider>
-            </ChatProvider>
+            <WebSocketProvider>
+              <ChatProvider>
+                <TokenInfluencerProvider>
+                  <main className="dark text-foreground bg-background">
+                    <ErrorBoundary>
+                      <ConditionalChatModal />
+                    </ErrorBoundary>
+                    <App />
+                  </main>
+                </TokenInfluencerProvider>
+              </ChatProvider>
+            </WebSocketProvider>
           </AuthProviderLogin>
         </BrowserRouter>
       </TonConnectUIProvider>

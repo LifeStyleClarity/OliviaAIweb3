@@ -4,7 +4,7 @@ import { API_GATEWAY_JWT } from './endpoints';
 const axiosInstanceAPIGateway = axios.create({
   headers: {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${API_GATEWAY_JWT}`
+    ...(API_GATEWAY_JWT && { "Authorization": `Bearer ${API_GATEWAY_JWT}` })
   },
 });
 

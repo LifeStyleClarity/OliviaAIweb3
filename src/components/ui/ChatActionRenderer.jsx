@@ -46,7 +46,7 @@ const ChatActionRenderer = ({
           amount={amount}
           swap_type={swap_type}
           contract_address={contract_address}
-          walletAddress={meta.walletAddress}
+          walletAddress={meta?.walletAddress}
         />
       );
     case "found_multiple_ca":
@@ -57,6 +57,28 @@ const ChatActionRenderer = ({
           swap_type={swap_type}
         />
       );
+    
+    // New action types for enhanced streaming system
+    case "web_search_results":
+      return (
+        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="text-sm font-medium text-blue-900 mb-2">Web Search Results</h4>
+          <div className="text-sm text-blue-800">
+            {meta?.results ? `Found ${meta.results.length} results` : 'Searching...'}
+          </div>
+        </div>
+      );
+      
+    case "thinking":
+      return (
+        <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+            <span className="text-sm text-purple-700">Thinking...</span>
+          </div>
+        </div>
+      );
+      
     default:
       return null;
   }

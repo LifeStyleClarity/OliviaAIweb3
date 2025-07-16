@@ -6,8 +6,20 @@ import ReactMarkdown from 'react-markdown';
 import TypeWriter from './TypeWriter';
 import TypingDots from './TypingDots';
 import FadeUpMessage from './FadeUpMessage';
+import SourcesDrawer from './SourcesDrawer';
+import ThinkingIndicator from './ThinkingIndicator';
 
-const ChatMessages = ({ messages, onUpdateMessage, onSendMessage, isBotResponding, processingMessage }) => {
+const ChatMessages = ({ 
+  messages, 
+  onUpdateMessage, 
+  onSendMessage, 
+  isBotResponding, 
+  processingMessage, 
+  useStreamingMode = false,
+  isStreamingResponse = false,
+  currentAction = null,
+  actionStatus = null 
+}) => {
   const messagesEndRef = useRef(null);
   //console.log("messages: ", messages)
   const scrollToBottom = () => {
@@ -18,16 +30,11 @@ const ChatMessages = ({ messages, onUpdateMessage, onSendMessage, isBotRespondin
     scrollToBottom();
   }, [messages]);
 
-  const prefillOptions = [
-    "What's trending today Olivia?",
-    "What @elonmusk is talking on X?",
-    "I want to buy $DOGS with 0.1 TON",
-    "Tell me more about $DOGS"
-  ];
+
 
   return (
     <div className="flex  flex-col gap-4 h-full">
-      {messages.map((msg, index) => (
+      {messages.filter(msg => !msg.isExplanation).map((msg, index) => (
         <div key={index}>
           {msg.sender === "user" ? null : (
             <p className="flex justify-start items-center gap-1 text-[12px] text-opacity-80">
@@ -110,11 +117,20 @@ const ChatMessages = ({ messages, onUpdateMessage, onSendMessage, isBotRespondin
             ) : (
               <FadeUpMessage>
                 <div className="flex flex-col gap-2">
-                  <div className="prose prose-invert max-w-none prose-p:text-[12px] prose-p:leading-5 prose-p:my-0 text-[12px]">
+                  {/* Explanation message indicator */}
+                  {msg.isExplanation && (
+                    <div className="text-xs text-gray-500 italic">
+                      Explanation
+                    </div>
+                  )}
+                  
+                  <div className={`prose prose-invert max-w-none prose-p:text-[12px] prose-p:leading-5 prose-p:my-0 text-[12px] ${
+                    msg.isExplanation ? 'border-l-2 border-purple-500 pl-3' : ''
+                  }`}>
                     {msg.isNew ? (
                       <div className="text-[12px] leading-5">
                         <TypeWriter
-                          text={msg.text}
+                          text={msg.text || msg.content}
                           speed={5}
                           onTextUpdate={() => scrollToBottom()}
                           onComplete={() => {
@@ -128,20 +144,53 @@ const ChatMessages = ({ messages, onUpdateMessage, onSendMessage, isBotRespondin
                     ) : (
                       <ReactMarkdown
                         components={{
-                          img: ({ ...props }) => (
-                            <img
-                              {...props}
-                              style={{
-                                width: "24px",
-                                height: "24px",
-                                objectFit: "contain",
-                                display: "inline-block",
-                                verticalAlign: "middle",
-                                margin: 0,
-                                borderRadius: "9999px",
-                              }}
-                            />
-                          ),
+                          img: ({ src, alt, ...props }) => {
+                            return (
+                              <img
+                                {...props}
+                                src={src}
+                                alt={alt}
+                                style={{
+                                  maxWidth: "200px",
+                                  maxHeight: "200px",
+                                  width: "auto",
+                                  height: "auto",
+                                  objectFit: "contain",
+                                  display: "block",
+                                  margin: "8px 0",
+                                  borderRadius: "8px",
+                                  border: "1px solid #374151"
+                                }}
+                                onError={(e) => {
+                                  // Replace with placeholder on error
+                                  e.target.style.display = "none";
+                                  const placeholder = document.createElement("div");
+                                  placeholder.innerHTML = `
+                                    <div style="
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                      width: 200px;
+                                      height: 100px;
+                                      background-color: #374151;
+                                      border-radius: 8px;
+                                      border: 1px solid #4B5563;
+                                      margin: 8px 0;
+                                      flex-direction: column;
+                                      gap: 8px;
+                                    ">
+                                      <div style="font-size: 24px;">📷</div>
+                                      <div style="font-size: 12px; color: #9CA3AF; text-align: center;">
+                                        Image failed to load
+                                      </div>
+                                    </div>
+                                  `;
+                                  placeholder.title = alt || "Image failed to load";
+                                  e.target.parentNode.insertBefore(placeholder, e.target);
+                                }}
+                              />
+                            );
+                          },
                           a: ({ ...props }) => (
                             <a
                               {...props}
@@ -158,15 +207,21 @@ const ChatMessages = ({ messages, onUpdateMessage, onSendMessage, isBotRespondin
                           ),
                         }}
                       >
-                        {msg.text}
+                        {msg.text || msg.content}
                       </ReactMarkdown>
                     )}
                   </div>
+                  
+                  {/* Show sources if available */}
+                  {msg.sources && (
+                    <SourcesDrawer sources={msg.sources} />
+                  )}
                 </div>
               </FadeUpMessage>
             )}
           </div>
-          {msg.typingComplete && msg.action_type && (
+          {/* Render actions for completed messages */}
+          {(msg.typingComplete || msg.isComplete) && msg.action_type && (
             <div className="w-full mt-2">
               <ChatActionRenderer
                 action_type={msg.action_type}
@@ -175,72 +230,25 @@ const ChatMessages = ({ messages, onUpdateMessage, onSendMessage, isBotRespondin
                 amount={msg.amount}
                 swap_type={msg.swap_type}
                 contract_address={msg.contract_address}
+                onSendMessage={onSendMessage}
               />
             </div>
           )}
         </div>
       ))}
-      {/* Processing message with typing indicator */}
-      {messages.length > 0 && isBotResponding && (
-        <div className="w-fit max-w-[80%]">
-          <p className="flex justify-start items-center gap-1 text-[12px] text-opacity-80">
-            <img
-              src="/Olivia-ai-LOGO.png"
-              alt="Olivia AI"
-              className="w-auto h-[14px]"
-            />
-            Olivia
-          </p>
-          <div className="flex items-center gap-1 bg-transparent text-gray-300 mb-2 rounded-lg">
-            <div className="text-[12px] leading-5 font-medium">
-              {processingMessage ? (
-                <TypeWriter 
-                  text={processingMessage} 
-                  speed={5} 
-                  onTextUpdate={() => scrollToBottom()}
-                />
-              ) : (
-                <TypingDots />
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Enhanced thinking indicator - shows real processing state */}
+      {/* Show thinking indicator immediately when chat opens, even with no messages */}
+      {(isBotResponding || isStreamingResponse) && (
+        <ThinkingIndicator
+          processingMessage={processingMessage}
+          currentAction={currentAction}
+          isStreamingResponse={isStreamingResponse}
+        />
       )}
 
       <div ref={messagesEndRef} />
 
-      {messages.length === 0 && (
-        <div className="mt-auto mb-4">
-          <div className="flex flex-col gap-3">
-            <FadeUpMessage>
-              <p className="text-gray-400 text-sm text-center">Start a conversation with Olivia</p>
-            </FadeUpMessage>
-            <div className="flex flex-wrap justify-center gap-2">
-              {prefillOptions.map((option, index) => (
-                <div
-                  key={index}
-                  className="animate-prefill-fade-up"
-                  style={{
-                    animationDelay: `${(index + 1) * 150}ms`
-                  }}
-                >
-                  <button
-                    onClick={() => {
-                      // Only trigger the AI response, which will add the user message to the chat
-                      if (onSendMessage) {
-                        onSendMessage(option);
-                      }
-                    }}
-                    className="px-4 py-2 rounded-full text-sm bg-gradient-to-r from-[#31F46E]/10 to-[#0AFDE1]/10 text-[#31F46E] hover:from-[#31F46E]/20 hover:to-[#0AFDE1]/20 transition-all border border-[#31F46E]/20"
-                  >
-                    {option}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+
       <div className='min-h-[24px] w-full'></div>
     </div>
   );
@@ -249,13 +257,19 @@ const ChatMessages = ({ messages, onUpdateMessage, onSendMessage, isBotRespondin
 ChatMessages.propTypes = {
   messages: PropTypes.arrayOf(
     PropTypes.shape({
-      sender: PropTypes.oneOf(['user', 'bot', 'assistant']).isRequired,
+      sender: PropTypes.oneOf(['user', 'bot', 'assistant', 'agent']).isRequired,
       type: PropTypes.oneOf(['text', 'audio']),
       text: PropTypes.string,
+      content: PropTypes.string, // New: for streaming messages
       audioBlob: PropTypes.instanceOf(Blob),
       showText: PropTypes.bool,
       isNew: PropTypes.bool,
       typingComplete: PropTypes.bool,
+      isComplete: PropTypes.bool, // New: for streaming completion
+      isExplanation: PropTypes.bool, // New: for explanation messages
+      completed: PropTypes.bool, // New: for explanation completion
+      sources: PropTypes.array, // New: for source citations
+      role: PropTypes.oneOf(['user', 'assistant']), // New: for streaming format
       action_type: PropTypes.string,
       sub_action_type: PropTypes.string,
       meta: PropTypes.any,
@@ -268,6 +282,10 @@ ChatMessages.propTypes = {
   onSendMessage: PropTypes.func,
   isBotResponding: PropTypes.bool,
   processingMessage: PropTypes.string,
+  useStreamingMode: PropTypes.bool,
+  isStreamingResponse: PropTypes.bool,
+  currentAction: PropTypes.string,
+  actionStatus: PropTypes.string
 };
 
 export default ChatMessages;

@@ -9,7 +9,7 @@ export default function About() {
         <p className="text-foreground/60 mb-6">
           This is a demo project showcasing React with Vite, TailwindCSS, and HeroUI components.
         </p>
-        <Link to="/">
+        <Link to="/home">
           <Button variant="primary">
             Back to Home
           </Button>

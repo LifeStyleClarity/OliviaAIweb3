@@ -1,6 +1,6 @@
-const WS_BASE_URL = import.meta.env.VITE_WEBSOCKET_URL;
-const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL;
-const API_GATEWAY_TON_URL = import.meta.env.VITE_API_GATEWAY_TON_URL;
+const WS_BASE_URL = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8000';
+const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL || 'https://api.example.com';
+const API_GATEWAY_TON_URL = import.meta.env.VITE_API_GATEWAY_TON_URL || 'https://ton-api.example.com';
 export const API_GATEWAY_JWT = import.meta.env.VITE_API_GATEWAY_JWT;
 
 export const ENDPOINTS = {

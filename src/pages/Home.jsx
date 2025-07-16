@@ -1,6 +1,5 @@
 import PortfolioValue from '../components/features/home/PortfolioValue'
 import QuickActions from '../components/features/home/QuickActions'
-import ChatWithOlivia from '../components/features/home/ChatWithOlivia'
 import TradingTokens from '../components/features/home/TradingTokens'
 import TradingInfluencers from '../components/features/home/TradingInfluencers'
 import TrendingSentiment from '../components/features/home/TrendingSentiment'
@@ -11,7 +10,6 @@ export default function Home() {
       {/* Blur sphere */}
       <PortfolioValue />
       <QuickActions />
-      <ChatWithOlivia />
       <TradingTokens />
       <TradingInfluencers />
       <TrendingSentiment />

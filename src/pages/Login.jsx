@@ -6,16 +6,19 @@ import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import { WalletAuthModal } from '../components/WalletAuthModal';
 import { useWalletAuthFlow } from '../hooks/useWalletAuthFlow';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   // Auth hooks for wallet and Telegram
   const { loading: tonLoading, error: tonError, wallet } = useTonConnectAuth();
   const { loading: telegramLoading, handleTelegramAuth, error: telegramError } = useTelegramAuth();
   const loading = tonLoading || telegramLoading;
+  const videoRef = useRef(null);
 
   // Authentication context (if needed)
-  const { setUserAuthenticated, setUserData } = useAuth();
+  const { setUserAuthenticated, setUserData, loginAsGuest } = useAuth();
+  const navigate = useNavigate();
 
   // Use our custom hook for shared wallet auth logic
   const {
@@ -47,7 +50,21 @@ export default function Login() {
       }
     }
 
+    // Auto-play video
+    const video = videoRef.current;
+    if (video) {
+      video.play().catch(error => {
+        console.log('Background video autoplay failed:', error);
+      });
+    }
+
   }, []);
+
+  // Handle guest login
+  const handleGuestLogin = () => {
+    loginAsGuest();
+    navigate('/home');
+  };
 
   return (
     <>
@@ -61,32 +78,56 @@ export default function Login() {
         wallet={wallet}
       />
 
-      <div className="min-h-screen bg-black flex items-center relative justify-center px-4 safe-area-view">
-        <div className="w-full max-w-[300px] flex flex-col items-center z-10">
+      <div className="min-h-screen flex items-center relative justify-center px-4 safe-area-view">
+        {/* Background Video */}
+        <video
+          ref={videoRef}
+          className="absolute top-0 left-0 w-full h-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          style={{
+            width: '100%',
+            height: '100vh',
+            objectFit: 'cover'
+          }}
+        >
+          <source src="/background-video.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+
+        {/* Dark overlay for better text readability */}
+        <div className="absolute inset-0 bg-black/50" />
+        
+        <div className="w-full max-w-[600px] flex flex-col items-center z-10">
           <img
             src="/olivia-logo-white.png"
             alt="Olivia AI"
             className="w-auto h-[40px] mb-10"
           />
-          <h1 className="text-[24px] font-bold text-center text-[#ffffff] mb-2">
-            An All-in-one AI Engine
+          <h1 className="text-[32px] font-bold text-center text-[#ffffff] mb-4">
+            The Communications Layer for AI-Powered Web3
           </h1>
-          <p className="text-[#888888] text-[16px] text-center mb-8">
-            Join the AI Web3 community and unlock the power of AI with your ONAI Wallet
+          <p className="text-[#cccccc] text-[18px] text-center mb-12 max-w-[500px]">
+            Enabling dApps, wallets, and bots to launch real-time, intelligent agents in seconds. Every interaction is measurable, monetizable, and on-chain.
           </p>
-          <div className="w-full flex flex-col items-center gap-5">
+          <div className="w-full flex flex-row items-center justify-center gap-3">
             {/* TON Connect Button */}
-            <div
-              className={`w-full flex justify-center items-center ${loading ? 'opacity-50 pointer-events-none' : ''}`}
+            <Button
+              onPress={() => {
+                // Get the TON Connect button element and click it
+                const tonConnectBtn = document.querySelector('ton-connect-button');
+                if (tonConnectBtn) {
+                  tonConnectBtn.click();
+                }
+              }}
+              className="flex-1 min-w-[160px] max-w-[180px] h-[48px] bg-[#0098EA] hover:bg-[#007ACC] text-white font-medium text-sm rounded-lg flex items-center justify-center"
+              isDisabled={loading}
             >
-              <TonConnectButton />
-            </div>
-
-            <div className="flex items-center gap-3 w-full">
-              <div className="h-[1px] flex-1 bg-white/10"></div>
-              <span className="text-gray-400 text-sm">or</span>
-              <div className="h-[1px] flex-1 bg-white/10"></div>
-            </div>
+              Connect Wallet
+            </Button>
 
             {/* Telegram Button */}
             <Button
@@ -94,25 +135,27 @@ export default function Login() {
                 //console.log('📱 Telegram auth button clicked');
                 handleTelegramAuth();
               }}
-              className="bg-transparent text-white/70 underline rounded-xl"
+              className="flex-1 min-w-[160px] max-w-[180px] h-[48px] bg-[#31F46E] hover:bg-[#28d15a] text-black font-medium text-sm rounded-lg flex items-center justify-center"
               isDisabled={loading}
             >
-              {loading ? (
-                <Spinner size="sm" color="white" />
-              ) : (
-                'Continue with Telegram'
-              )}
+              Continue with Telegram
             </Button>
 
-            {/* Display any errors */}
-            {(tonError || telegramError) && (
-              <p className="text-red-500 text-sm text-center mt-2">
-                {tonError?.message || telegramError?.message}
-              </p>
-            )}
+            {/* Guest Button */}
+            <Button
+              onPress={handleGuestLogin}
+              className="flex-1 min-w-[160px] max-w-[180px] h-[48px] bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 font-medium text-sm rounded-lg flex items-center justify-center"
+              isDisabled={loading}
+            >
+              Continue as Guest
+            </Button>
+          </div>
+          
+          {/* Hidden TON Connect Button for functionality */}
+          <div className="hidden">
+            <TonConnectButton />
           </div>
         </div>
-        <div className="absolute -z-0 -top-80 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-r from-[#206B18]/60 to-[#206B18]/70 blur-3xl animate-float" />
       </div>
     </>
   );

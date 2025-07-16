@@ -1,135 +1,74 @@
-import { useAuth } from '../contexts/AuthContext';
-import { useTonConnectUI } from '@tonconnect/ui-react';
-import { useTradeData } from '../hooks/useTradeData';
-import { useProfileSettings } from '../hooks/useProfileSettings';
+import { useState } from 'react'
+import { Button } from '@heroui/react'
+import { Card, CardBody, CardHeader } from '@heroui/react'
+import ChatMigrationTest from '../components/ui/ChatMigrationTest'
 
-function Tests() {
-  const { userData, userAuthenticated } = useAuth();
-  const [tonConnectUI] = useTonConnectUI();
-  const wallet = tonConnectUI.wallet;
+export default function Tests() {
+  const [activeTest, setActiveTest] = useState('migration')
 
-  const {
-    trades,
-    portfolio,
-    lastUpdate,
-    loadingStates: tradeLoadingStates,
-    errors: tradeErrors
-  } = useTradeData(
-    userData?.user_id,
-    wallet?.account?.address
-  );
-
-  const {
-    profileSettings,
-    isLoading: profileLoading,
-    error: profileError
-  } = useProfileSettings(
-    userData?.user_id,
-    wallet?.account?.address
-  );
-
-  const loadingStates = {
-    ...tradeLoadingStates,
-    profile: profileLoading
-  };
-
-  const errors = {
-    ...tradeErrors,
-    profile: profileError
-  };
-
-  if (!userAuthenticated) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="border border-red-400 text-red-700 px-4 py-3 rounded">
-          <p className="font-bold">Not Authenticated</p>
-          <p>Please log in to view trades data.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!userData) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-          <p className="font-bold">Authentication Status</p>
-          <p>Authenticated: {String(userAuthenticated)}</p>
-          <p>Waiting for user data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const isLoading = Object.values(loadingStates).some(state => state);
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="border border-blue-400 text-blue-700 px-4 py-3 rounded">
-          <p className="font-bold">Loading Data</p>
-          <div className="mt-2">
-            {loadingStates.profile && <p>Loading profile settings...</p>}
-            {loadingStates.portfolio && <p>Loading portfolio data...</p>}
-            {loadingStates.trades && <p>Loading trades data...</p>}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const tests = [
+    {
+      id: 'migration',
+      title: 'Olivia AI Migration Test',
+      description: 'Test the migration from old to new Olivia AI system',
+      component: <ChatMigrationTest />
+    }
+  ]
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Debug Data</h1>
-      
-      <div className="mb-4 border border-green-400 text-green-700 px-4 py-3 rounded">
-        <p className="font-bold">Authentication Status</p>
-        <p>Authenticated: {String(userAuthenticated)}</p>
+    <div className="p-6 max-w-6xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-4">Test Suite</h1>
+        <p className="text-gray-600">
+          Test various components and features of the OliviaAI application
+        </p>
       </div>
-      
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">User Data</h2>
-          <pre className="p-4 rounded-lg overflow-auto border">
-            {JSON.stringify(userData, null, 2)}
-          </pre>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Test Navigation */}
+        <div className="md:col-span-1">
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold">Available Tests</h3>
+            </CardHeader>
+            <CardBody>
+              <div className="space-y-2">
+                {tests.map((test) => (
+                  <Button
+                    key={test.id}
+                    variant={activeTest === test.id ? "solid" : "bordered"}
+                    className={`w-full justify-start ${
+                      activeTest === test.id ? 'bg-blue-500 text-white' : ''
+                    }`}
+                    onPress={() => setActiveTest(test.id)}
+                  >
+                    {test.title}
+                  </Button>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
         </div>
 
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Portfolio Data</h2>
-          {errors.portfolio ? (
-            <div className="text-red-500 mb-2">Error: {errors.portfolio}</div>
-          ) : null}
-          <pre className="p-4 rounded-lg overflow-auto border">
-            {JSON.stringify(portfolio, null, 2)}
-          </pre>
-        </div>
-
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Profile Settings</h2>
-          {errors.profile ? (
-            <div className="text-red-500 mb-2">Error: {errors.profile}</div>
-          ) : null}
-          <pre className="p-4 rounded-lg overflow-auto border">
-            {JSON.stringify(profileSettings, null, 2)}
-          </pre>
-        </div>
-
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Trades Data</h2>
-          <div className="border border-blue-400 text-blue-700 px-4 py-3 rounded mb-2">
-            <p>Auto-refreshing every 30 seconds</p>
-            <p>Last update: {lastUpdate.toLocaleTimeString()}</p>
-          </div>
-          {errors.trades ? (
-            <div className="text-red-500 mb-2">Error: {errors.trades}</div>
-          ) : null}
-          <pre className="p-4 rounded-lg overflow-auto border">
-            {JSON.stringify(trades, null, 2)}
-          </pre>
+        {/* Test Content */}
+        <div className="md:col-span-3">
+          <Card>
+            <CardHeader>
+              <div>
+                <h3 className="text-lg font-semibold">
+                  {tests.find(t => t.id === activeTest)?.title}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {tests.find(t => t.id === activeTest)?.description}
+                </p>
+              </div>
+            </CardHeader>
+            <CardBody>
+              {tests.find(t => t.id === activeTest)?.component}
+            </CardBody>
+          </Card>
         </div>
       </div>
     </div>
-  );
+  )
 }
-
-export default Tests;

@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Home from './pages/Home';
 import Login from './pages/Login';
+import LandingPage from './pages/LandingPage';
 import Explore from './pages/Explore';
 import Portfolio from './pages/Portfolio';
 import Game from './pages/Game';
@@ -48,6 +49,14 @@ function App() {
         ) : (
           <>
             <Route
+              path="/"
+              element={
+                <PublicRoute>
+                  <LandingPage />
+                </PublicRoute>
+              }
+            />
+            <Route
               path="/login"
               element={
                 <PublicRoute>
@@ -57,7 +66,7 @@ function App() {
             />
             <Route element={<PrivateRoute />}>
               <Route element={<Layout />}>
-                <Route path="/" element={<Home />} />
+                <Route path="/home" element={<Home />} />
                 <Route path="/explore" element={<Explore />} />
                 <Route path="/portfolio" element={<Portfolio />} />
                 <Route path="/game" element={<Game />} />

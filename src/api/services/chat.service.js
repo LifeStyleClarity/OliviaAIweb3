@@ -201,7 +201,7 @@ class ChatService {
      * @returns {Promise<import('../types/chat.types').ChatHistoryData>} Chat history data
      */
     async getChatHistory(userId) {
-        if (!userId) return null;
+        if (!userId || userId === 'guest_user') return null;
         
         try {
             const response = await axiosInstanceAPIGateway.get(
@@ -213,7 +213,8 @@ class ChatService {
                 return null;
             }
             console.error('Error fetching chat history:', error);
-            throw error;
+            // Return null instead of throwing to prevent app crashes
+            return null;
         }
     }
 
@@ -224,7 +225,7 @@ class ChatService {
      * @returns {Promise<import('../types/chat.types').ChatHistoryData>} Updated chat history data
      */
     async updateChatHistory(userId, chatData) {
-        if (!userId) return null;
+        if (!userId || userId === 'guest_user') return null;
         
         try {
             const response = await axiosInstanceAPIGateway.put(
@@ -237,7 +238,8 @@ class ChatService {
                 return null;
             }
             console.error('Error updating chat history:', error);
-            throw error;
+            // Return null instead of throwing to prevent app crashes
+            return null;
         }
     }
 }

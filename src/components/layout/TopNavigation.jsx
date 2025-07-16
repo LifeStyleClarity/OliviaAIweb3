@@ -9,11 +9,14 @@ import SettingsButton from '../ui/SettingsButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWalletAuthFlow } from '../../hooks/useWalletAuthFlow';
 import { WalletAuthModal } from '../WalletAuthModal';
+import Button from '../ui/Button';
+import { useNavigate } from 'react-router-dom';
 
 export default function TopNavigation() {
   const wallet = useTonWallet();
   const location = useLocation();
-  const { setUserAuthenticated, telegramUser, setTelegramUser } = useAuth();
+  const { setUserAuthenticated, telegramUser, setTelegramUser, isGuestUser, logout } = useAuth();
+  const navigate = useNavigate();
 
   // Use the shared hook for wallet authentication logic
   const {
@@ -44,6 +47,12 @@ export default function TopNavigation() {
     }
   }, [wallet, setUserAuthenticated, telegramUser]);
 
+  // Handle guest logout
+  const handleGuestLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   return (
     <>
       {/* Render the shared Wallet Authentication Modal if needed */}
@@ -59,13 +68,26 @@ export default function TopNavigation() {
       <div className="px-4 py-4 z-10">
         <div className="flex justify-between items-center">
           <div className="relative max-w-[200px]">
-            <TonConnectButton className="!text-base bg-transparent" />
+            {isGuestUser ? (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400 text-sm">Guest Mode</span>
+                <Button
+                  onPress={handleGuestLogout}
+                  className="bg-transparent text-white/70 underline text-sm"
+                  size="sm"
+                >
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <TonConnectButton className="!text-base bg-transparent" />
+            )}
           </div>
           <div className="flex items-center gap-1">
-            <AirdropButton />
-            <NotificationButton />
+            {!isGuestUser && <AirdropButton />}
+            {!isGuestUser && <NotificationButton />}
             <AnimatePresence mode="wait">
-              {location.pathname === '/portfolio' && (
+              {location.pathname === '/portfolio' && !isGuestUser && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}

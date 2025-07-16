@@ -4,14 +4,13 @@ import PropTypes from 'prop-types';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const PrivateRoute = () => {
-  const { userAuthenticated } = useAuth();
+  const { userAuthenticated, telegramUser, isGuestUser } = useAuth();
   const location = useLocation();
-  const { telegramUser, setTelegramUser } = useAuth();
 
-  //console.log('🔒 PrivateRoute state:', { userAuthenticated, location });
+  //console.log('🔒 PrivateRoute state:', { userAuthenticated, telegramUser, isGuestUser, location });
 
-  // Only allow access if user is authenticated
-  if (!userAuthenticated && !telegramUser) {
+  // Allow access if user is authenticated, telegram user, or guest user
+  if (!userAuthenticated && !telegramUser && !isGuestUser) {
     //console.log('🔒 PrivateRoute: Redirecting to login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
@@ -21,13 +20,13 @@ export const PrivateRoute = () => {
 };
 
 export const PublicRoute = ({ children }) => {
-  const { userAuthenticated } = useAuth();
-  //console.log('🔄 PublicRoute state:', { userAuthenticated });
+  const { userAuthenticated, telegramUser, isGuestUser } = useAuth();
+  //console.log('🔄 PublicRoute state:', { userAuthenticated, telegramUser, isGuestUser });
 
-  // If user is authenticated, redirect to home
-  if (userAuthenticated) {
+  // If user is authenticated (including guest), redirect to home
+  if (userAuthenticated || telegramUser || isGuestUser) {
     //console.log('🔄 PublicRoute: Redirecting to home');
-    return <Navigate to="/" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   //console.log('🔄 PublicRoute: Showing login page');

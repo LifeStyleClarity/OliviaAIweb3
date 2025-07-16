@@ -11,6 +11,8 @@ export function startOliviaChat(extraData) {
   if (setIsOpenRef) {
     extraDataRef = extraData;
     setIsOpenRef(true);
+  } else {
+    console.error('❌ setIsOpenRef is not available!');
   }
 }
 

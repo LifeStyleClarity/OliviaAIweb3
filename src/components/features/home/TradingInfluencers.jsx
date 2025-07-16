@@ -3,37 +3,99 @@ import { useNavigate } from 'react-router-dom';
 import { startOliviaChat } from '../../../utils/olivia';
 import { ChevronRight } from 'lucide-react';
 import { socialService } from '../../../api';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export default function TradingInfluencers() {
   const navigate = useNavigate();
   const [influencers, setInfluencers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { isGuestUser } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await socialService.getInfluencers();
-        // Get top 3 influencers with their most mentioned cashtag
-        const topInfluencers = data
-          .slice(0, 3)
-          .map(({ influencer, cashtags }) => ({
-            id: influencer.id,
-            name: influencer.username,
-            handle: `@${influencer.username}`,
-            image: influencer.avatar_image,
-            tag: cashtags?.length > 0 ? `$${cashtags[0].cashtag}` : '$TON',
-            tagColor: '#4ED342' // Keep consistent green color
-          }));
-        setInfluencers(topInfluencers);
+        // For guest users, provide mock data
+        if (isGuestUser) {
+          setInfluencers([
+            {
+              id: 1,
+              name: 'CryptoAnalyst',
+              handle: '@CryptoAnalyst',
+              image: '/Olivia_pose_front.png',
+              tag: '$TON',
+              tagColor: '#4ED342'
+            },
+            {
+              id: 2,
+              name: 'BlockchainExpert',
+              handle: '@BlockchainExpert',
+              image: '/Olivia_pose_front.png',
+              tag: '$BTC',
+              tagColor: '#4ED342'
+            },
+            {
+              id: 3,
+              name: 'DeFiTrader',
+              handle: '@DeFiTrader',
+              image: '/Olivia_pose_front.png',
+              tag: '$ETH',
+              tagColor: '#4ED342'
+            }
+          ]);
+        } else {
+          const data = await socialService.getInfluencers();
+          // Get top 3 influencers with their most mentioned cashtag
+          const topInfluencers = data
+            .slice(0, 3)
+            .map(({ influencer, cashtags }) => ({
+              id: influencer.id,
+              name: influencer.username,
+              handle: `@${influencer.username}`,
+              image: influencer.avatar_image,
+              tag: cashtags?.length > 0 ? `$${cashtags[0].cashtag}` : '$TON',
+              tagColor: '#4ED342' // Keep consistent green color
+            }));
+          setInfluencers(topInfluencers);
+        }
       } catch (error) {
-        console.error("Error:", error);
+        // Silently handle errors for guest users
+        if (!isGuestUser) {
+          console.error("Error fetching trading influencers:", error);
+        }
+        // Fallback to mock data
+        setInfluencers([
+          {
+            id: 1,
+            name: 'CryptoAnalyst',
+            handle: '@CryptoAnalyst',
+            image: '/Olivia_pose_front.png',
+            tag: '$TON',
+            tagColor: '#4ED342'
+          },
+          {
+            id: 2,
+            name: 'BlockchainExpert',
+            handle: '@BlockchainExpert',
+            image: '/Olivia_pose_front.png',
+            tag: '$BTC',
+            tagColor: '#4ED342'
+          },
+          {
+            id: 3,
+            name: 'DeFiTrader',
+            handle: '@DeFiTrader',
+            image: '/Olivia_pose_front.png',
+            tag: '$ETH',
+            tagColor: '#4ED342'
+          }
+        ]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [isGuestUser]);
 
   if (loading) {
     return (

@@ -45,6 +45,7 @@ export { profileService } from './services/profile.service.js';
 export { airdropService } from './services/airdrop.service.js';
 export { transactionService } from './services/transaction.service.js';
 export { tokenService } from './services/token.service.js';
+export { aiService } from './services/ai.service.js';
 
 // Types
 export * from './types/portfolio.types.js';

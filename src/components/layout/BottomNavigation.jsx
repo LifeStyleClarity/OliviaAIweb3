@@ -62,9 +62,9 @@ export default function BottomNavigation() {
                   variant="ghost"
                   fullWidth
                   className="min-w-0 h-auto p-0 flex flex-col items-center"
-                  onPress={() => handleNavigation('/')}
+                  onPress={() => handleNavigation('/home')}
                 >
-                  <Home className={`w-5 h-5 ${location.pathname === '/' ? 'stroke-[#31F46E]' : 'stroke-white'}`} />
+                  <Home className={`w-5 h-5 ${location.pathname === '/home' ? 'stroke-[#31F46E]' : 'stroke-white'}`} />
                   <span className="text-[10px] mt-0.5">Home</span>
                 </Button>
               </div>

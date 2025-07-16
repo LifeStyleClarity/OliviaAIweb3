@@ -2,31 +2,53 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { startOliviaChat } from '../../../utils/olivia';
 import { socialService } from '../../../api';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export default function TradingTokens() {
   const navigate = useNavigate();
   const [tokens, setTokens] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { isGuestUser } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const topTokens = await socialService.getTopMentionedTokens(4);
-        setTokens(topTokens.map(token => ({
-          id: token.data.id,
-          name: token.data.token_symbol,
-          image: token.data.token_icon,
-          mentions: token.totalMentions || 0
-        })));
+        // For guest users, provide mock data or skip API calls
+        if (isGuestUser) {
+          setTokens([
+            { id: 1, name: 'TON', image: '/tonicon.webp', mentions: 1200 },
+            { id: 2, name: 'BTC', image: '/tonicon.webp', mentions: 800 },
+            { id: 3, name: 'ETH', image: '/tonicon.webp', mentions: 650 },
+            { id: 4, name: 'USDT', image: '/tonicon.webp', mentions: 400 }
+          ]);
+        } else {
+          const topTokens = await socialService.getTopMentionedTokens(4);
+          setTokens(topTokens.map(token => ({
+            id: token.data.id,
+            name: token.data.token_symbol,
+            image: token.data.token_icon,
+            mentions: token.totalMentions || 0
+          })));
+        }
       } catch (error) {
-        console.error("Error:", error);
+        // Silently handle errors for guest users
+        if (!isGuestUser) {
+          console.error("Error fetching trading tokens:", error);
+        }
+        // Fallback to mock data
+        setTokens([
+          { id: 1, name: 'TON', image: '/tonicon.webp', mentions: 1200 },
+          { id: 2, name: 'BTC', image: '/tonicon.webp', mentions: 800 },
+          { id: 3, name: 'ETH', image: '/tonicon.webp', mentions: 650 },
+          { id: 4, name: 'USDT', image: '/tonicon.webp', mentions: 400 }
+        ]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [isGuestUser]);
 
   if (loading) {
     return (
