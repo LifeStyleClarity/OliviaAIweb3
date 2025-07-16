@@ -660,25 +660,25 @@ const ChatModal = () => {
     <Modal
       isOpen={isOpen}
       onOpenChange={setIsOpen}
-      size="lg"
+      size="full"
       scrollBehavior="inside"
       className='text-white'
       backdrop="transparent"
       classNames={{
         base: "bg-transparent backdrop-blur-none",
         backdrop: "bg-black/30 backdrop-blur-sm",
-        wrapper: "bg-transparent flex items-center justify-center p-4",
+        wrapper: "bg-transparent flex items-start justify-center p-2",
         closeButton: "text-white hover:bg-white/10"
       }}
     >
       <ModalContent 
         style={{ 
-          height: 'auto', 
-          maxHeight: '85vh', 
-          width: '700px',
-          maxWidth: '95vw'
+          height: 'calc(100vh - 85px)', // Full height minus bottom nav space and margin
+          maxHeight: 'calc(100vh - 85px)', 
+          width: 'calc(100vw - 16px)', // Almost full width with small margin
+          maxWidth: 'calc(100vw - 16px)'
         }}
-        className="bg-black/30 backdrop-blur-lg border border-white/20 shadow-2xl rounded-2xl mx-4 my-8"
+        className="bg-black/30 backdrop-blur-lg border border-white/20 shadow-2xl rounded-2xl mt-2 mx-2"
       >
         <ModalHeader className="flex flex-col gap-1 bg-black/20 backdrop-blur-sm border-b border-white/10 rounded-t-2xl">
           <div className="flex items-center justify-between w-full">
