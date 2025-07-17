@@ -10,7 +10,6 @@ import { WebSocketProvider } from './contexts/WebSocketContext.jsx'
 
 import ConditionalChatModal from './components/ui/ConditionalChatModal.jsx'
 import { AuthProviderLogin } from './contexts/AuthContext.jsx'
-import { TokenInfluencerProvider } from './contexts/TokenInfluencerContext.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 import TelegramAnalytics from '@telegram-apps/analytics'
@@ -36,14 +35,11 @@ createRoot(document.getElementById('root')).render(
           <AuthProviderLogin>
             <WebSocketProvider>
             <ChatProvider>
-              <TokenInfluencerProvider>
                 <main className="dark text-foreground bg-background">
                     <ErrorBoundary>
-                      <ConditionalChatModal />
+                      <App />
                     </ErrorBoundary>
-                  <App />
                 </main>
-              </TokenInfluencerProvider>
             </ChatProvider>
             </WebSocketProvider>
           </AuthProviderLogin>

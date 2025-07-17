@@ -10,6 +10,7 @@ const ICPStoredMessages = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [showTechnicalData, setShowTechnicalData] = useState(false);
   
   // Import upgrade hook for testing
   const { forceShowUpgrade, resetUpgradeState, messageCount, canUpgrade } = useAccountUpgrade();
@@ -213,6 +214,96 @@ const ICPStoredMessages = () => {
           Connection Error: {error}
           <div className="mt-2 text-white/50 text-xs">
             Make sure your ICP local replica is running with `dfx start`
+          </div>
+        </div>
+      )}
+
+      {/* Technical Data Button */}
+      <div className="mt-4 pt-4 border-t border-white/10">
+        <button
+          onClick={() => setShowTechnicalData(!showTechnicalData)}
+          className="w-full px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-sm hover:bg-blue-500/30 transition-colors"
+        >
+          {showTechnicalData ? 'Hide Technical Data' : 'Show Technical Data'}
+        </button>
+      </div>
+
+      {/* Technical Data Panel */}
+      {showTechnicalData && (
+        <div className="mt-4 p-4 bg-white/5 rounded-lg space-y-4">
+          <div className="text-white font-semibold">ICP Chat Storage</div>
+          <div className="text-white/70 text-sm">Updated: {lastUpdated?.toLocaleTimeString() || 'Never'}</div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white/10 rounded-lg p-3">
+              <div className="text-white/70 text-sm">Total Messages</div>
+              <div className="text-white text-xl font-bold">{stats.messageCount}</div>
+            </div>
+            <div className="bg-white/10 rounded-lg p-3">
+              <div className="text-white/70 text-sm">Total Users</div>
+              <div className="text-white text-xl font-bold">{stats.userCount}</div>
+            </div>
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={initializeICP}
+              disabled={loading}
+              className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition-colors disabled:opacity-50"
+            >
+              {loading ? '🔄 Refreshing...' : '🔄 Refresh'}
+            </button>
+            <button
+              onClick={createTestUser}
+              className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-sm hover:bg-blue-500/30 transition-colors"
+            >
+              Create Test User
+            </button>
+            <button
+              onClick={createTestMessage}
+              className="px-3 py-1 bg-green-500/20 text-green-400 rounded-lg text-sm hover:bg-green-500/30 transition-colors"
+            >
+              Save Test Message
+            </button>
+          </div>
+
+          {/* All Stored Messages */}
+          <div className="space-y-3">
+            <div className="text-white/70 text-sm font-medium">All Stored Messages:</div>
+            {messages.length === 0 ? (
+              <div className="text-white/50 text-sm bg-white/5 rounded-lg p-3">
+                No messages found. Messages will appear here as they're saved to ICP.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {messages.map((message) => (
+                  <div key={message.id} className="bg-white/5 rounded-lg p-3 space-y-2 border-l-2 border-blue-500/50">
+                    <div className="flex justify-between items-start">
+                      <div className="text-white/70 text-xs">
+                        {formatTimestamp(message.timestamp)}
+                      </div>
+                      <div className="text-white/50 text-xs font-mono">
+                        {message.conversationId}
+                      </div>
+                    </div>
+                    <div className="text-white text-sm">
+                      <span className="text-blue-400 font-semibold">User:</span> {message.userMessage}
+                    </div>
+                    <div className="text-white text-sm">
+                      <span className="text-green-400 font-semibold">AI:</span> {message.aiResponse}
+                    </div>
+                    <div className="flex gap-2 text-xs">
+                      {message.metadata.searchEnabled && (
+                        <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded">Search</span>
+                      )}
+                      {message.metadata.imageEnabled && (
+                        <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded">Image</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

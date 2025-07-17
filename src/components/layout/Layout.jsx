@@ -10,16 +10,33 @@ import { useAccountUpgrade } from '../../hooks/useAccountUpgrade'
 export default function Layout() {
   const [showWelcomeDrawer, setShowWelcomeDrawer] = useState(false)
   const location = useLocation()
-  // Check if the current pathname is '/game'
-  const isGamePage = location.pathname === '/game'
+  // Remove game page logic
   const { telegramUser, setTelegramUser, userData, setUserData, isGuestUser } = useAuth();
   
   // Account upgrade flow
   const { 
     shouldShowUpgrade, 
     dismissUpgradePrompt, 
-    handleUpgradeSuccess 
+    handleUpgradeSuccess,
+    forceShowUpgrade // Add this function
   } = useAccountUpgrade();
+
+  // Make upgrade function available globally for AI actions
+  useEffect(() => {
+    window.showICPUpgrade = forceShowUpgrade;
+    
+    return () => {
+      delete window.showICPUpgrade;
+    };
+  }, [forceShowUpgrade]);
+
+  // Development helper - expose forceShowUpgrade to window for testing
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      window.forceUpgradePrompt = forceShowUpgrade;
+      console.log('🧪 Dev helper: Use window.forceUpgradePrompt() to test upgrade flow');
+    }
+  }, [forceShowUpgrade]);
 
   useEffect(() => {
     // Don't show welcome drawer for guest users
@@ -47,21 +64,17 @@ export default function Layout() {
   }, [userData, telegramUser, isGuestUser])
 
   return (
-    <div className={`h-screen hide-scrollbar w-full flex flex-col relative ${isGamePage ? "" : "pb-[65px]"}`}>
+    <div className={`h-screen hide-scrollbar w-full flex flex-col relative pb-[65px]`}>
       {/* Top Navigation */}
       <TopNavigation />
 
       {/* Main content */}
-      {/* <main className="flex-1 px-4"> */}
-      <main className={`flex-1 ${isGamePage ? '' : 'px-4'}`}>
+      <main className={`flex-1 px-4`}>
         <Outlet />
       </main>
 
       {/* Bottom Navigation */}
       <BottomNavigation />
-
-      {/* Bottom spacing for navigation */}
-      {/* <div className={`${isGamePage ? '' : 'h-[65px]'}`} /> */}
 
       {/* Welcome Drawer */}
       < WelcomeDrawer

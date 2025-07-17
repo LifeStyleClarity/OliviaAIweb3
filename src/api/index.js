@@ -4,12 +4,10 @@
  * This module exports all API-related functionality:
  * 
  * Services:
- * - portfolioService: TON Portfolio microservice integration
  * - socialService: Social data with authentication
  * - chatService: WebSocket chat and audio communication
  * 
  * Types:
- * - Portfolio types for TON integration
  * - Social types for influencer and token data
  * 
  * Configuration:
@@ -19,10 +17,6 @@
  * Usage examples:
  * 
  * ```javascript
- * // Portfolio service
- * import { portfolioService } from '@/api';
- * const portfolio = await portfolioService.getPortfolio(address);
- * 
  * // Social service
  * import { socialService } from '@/api';
  * const influencers = await socialService.getInfluencers();
@@ -35,7 +29,6 @@
  */
 
 // Services
-export { portfolioService } from './services/portfolio.service.js';
 export { socialService } from './services/social.service.js';
 export { chatService } from './services/chat.service.js';
 export * as authService from './services/auth.service.js';
@@ -48,7 +41,6 @@ export { tokenService } from './services/token.service.js';
 export { aiService } from './services/ai.service.js';
 
 // Types
-export * from './types/portfolio.types.js';
 export * from './types/social.types.js';
 export * from './types/auth.types.js';
 export * from './types/notification.types.js';

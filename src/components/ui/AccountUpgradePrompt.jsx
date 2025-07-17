@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useInternetIdentity } from '../../hooks/useInternetIdentity';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWebSocket } from '../../contexts/WebSocketContext';
 import icpService from '../../api/services/icp.service';
 import Button from './Button';
 
@@ -12,13 +13,12 @@ const AccountUpgradePrompt = ({ isOpen, onClose, onUpgradeSuccess }) => {
   
   const { login: internetIdentityLogin, principal, isLoading: iiLoading } = useInternetIdentity();
   const { userData, setUserData, setIsGuestUser, setUserAuthenticated } = useAuth();
+  const { icpUser } = useWebSocket();
+
+  // Debug logging
+  console.log('🔍 AccountUpgradePrompt props:', { isOpen, isUpgrading, step });
 
   const handleUpgradeWithII = async () => {
-    if (!userData || !userData.user_id) {
-      toast.error('No guest account found');
-      return;
-    }
-
     try {
       setIsUpgrading(true);
       setStep('upgrading');
@@ -32,37 +32,48 @@ const AccountUpgradePrompt = ({ isOpen, onClose, onUpgradeSuccess }) => {
         return;
       }
 
-      // Step 2: Upgrade the account
-      const result = await icpService.linkAccountToInternetIdentity(userData.user_id);
+      // Step 2: Create new ICP user with Internet Identity
+      const result = await icpService.createUser(
+        userData?.first_name || 'User',
+        userData?.last_name || '',
+        userData?.email || '',
+        userData?.telegram_id || null,
+        userData?.crypto_wallet_address || null
+      );
       
       if (result.success) {
-        setUpgradeResult(result);
+        setUpgradeResult({ 
+          success: true, 
+          upgradedUser: result.user,
+          migratedMessages: 0,
+          message: 'ICP Identity created successfully!'
+        });
         setStep('success');
         
         // Update auth context
         setUserData({
           ...userData,
-          user_id: result.upgradedUser.id.toString(),
+          user_id: result.user.id.toString(),
           auth_method: 'internet_identity',
           is_guest: false
         });
         setIsGuestUser(false);
         setUserAuthenticated(true);
         
-        toast.success(`Account upgraded! ${result.migratedMessages} messages migrated.`);
+        toast.success('ICP Identity created! Your chats will now be saved permanently.');
         
         // Notify parent component
         if (onUpgradeSuccess) {
           onUpgradeSuccess(result);
         }
       } else {
-        toast.error(result.message || 'Account upgrade failed');
+        toast.error(result.message || 'Failed to create ICP identity');
         setIsUpgrading(false);
         setStep('prompt');
       }
     } catch (error) {
-      console.error('Account upgrade error:', error);
-      toast.error('Account upgrade failed');
+      console.error('ICP identity creation error:', error);
+      toast.error('Failed to create ICP identity');
       setIsUpgrading(false);
       setStep('prompt');
     }

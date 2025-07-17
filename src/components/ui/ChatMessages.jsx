@@ -18,7 +18,8 @@ const ChatMessages = ({
   useStreamingMode = false,
   isStreamingResponse = false,
   currentAction = null,
-  actionStatus = null 
+  actionStatus = null,
+  isWarmingUp = false 
 }) => {
   const messagesEndRef = useRef(null);
   //console.log("messages: ", messages)
@@ -32,9 +33,11 @@ const ChatMessages = ({
 
 
 
+  console.log('🟦 ChatMessages rendering:', { messageCount: messages.length, messages: messages.map(m => ({ sender: m.sender, type: m.type, isExplanation: m.isExplanation, text: m.text?.substring(0, 50) })) });
+  
   return (
     <div className="flex  flex-col gap-4 h-full">
-      {messages.filter(msg => !msg.isExplanation).map((msg, index) => (
+      {messages.map((msg, index) => (
         <div key={index}>
           {msg.sender === "user" ? null : (
             <p className="flex justify-start items-center gap-1 text-[12px] text-opacity-80">
@@ -238,11 +241,12 @@ const ChatMessages = ({
       ))}
       {/* Enhanced thinking indicator - shows real processing state */}
       {/* Show thinking indicator immediately when chat opens, even with no messages */}
-      {(isBotResponding || isStreamingResponse) && (
+      {(isBotResponding || isStreamingResponse || isWarmingUp) && (
         <ThinkingIndicator
           processingMessage={processingMessage}
           currentAction={currentAction}
           isStreamingResponse={isStreamingResponse}
+          isWarmingUp={isWarmingUp}
         />
       )}
 
@@ -285,7 +289,8 @@ ChatMessages.propTypes = {
   useStreamingMode: PropTypes.bool,
   isStreamingResponse: PropTypes.bool,
   currentAction: PropTypes.string,
-  actionStatus: PropTypes.string
+  actionStatus: PropTypes.string,
+  isWarmingUp: PropTypes.bool
 };
 
 export default ChatMessages;

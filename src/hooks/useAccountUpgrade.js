@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useWebSocket } from '../contexts/WebSocketContext';
 import icpService from '../api/services/icp.service';
 
 const UPGRADE_TRIGGERS = {
@@ -17,6 +18,7 @@ const STORAGE_KEYS = {
 
 export const useAccountUpgrade = () => {
   const { userData, isGuestUser } = useAuth();
+  const { icpUser, icpInitialized } = useWebSocket();
   const [shouldShowUpgrade, setShouldShowUpgrade] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
   const [canUpgrade, setCanUpgrade] = useState(false);
@@ -44,20 +46,13 @@ export const useAccountUpgrade = () => {
 
   // Check if user's account can be upgraded
   const checkUpgradeEligibility = async () => {
-    if (!userData || !userData.user_id || !isGuestUser) return;
-
-    try {
-      setIsCheckingUpgrade(true);
-      const result = await icpService.canUpgradeAccount(userData.user_id);
-      
-      if (result.success) {
-        setCanUpgrade(result.canUpgrade);
-      }
-    } catch (error) {
-      console.error('Failed to check upgrade eligibility:', error);
-    } finally {
-      setIsCheckingUpgrade(false);
+    // For regular guest users (no ICP identity yet), they can always "upgrade" to ICP
+    if (isGuestUser) {
+      setCanUpgrade(true);
+      return;
     }
+    
+    setCanUpgrade(false);
   };
 
   // Track when user sends a message
@@ -122,8 +117,13 @@ export const useAccountUpgrade = () => {
 
   // Force show upgrade prompt (for testing or manual trigger)
   const forceShowUpgrade = useCallback(() => {
+    console.log('🧪 forceShowUpgrade called!', { isGuestUser, canUpgrade });
+    
     if (isGuestUser && canUpgrade) {
+      console.log('✅ Showing upgrade prompt');
       setShouldShowUpgrade(true);
+    } else {
+      console.log('❌ Cannot show upgrade:', { isGuestUser, canUpgrade });
     }
   }, [isGuestUser, canUpgrade]);
 

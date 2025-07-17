@@ -107,8 +107,8 @@ const ChatModal = () => {
       timeoutId = setTimeout(() => {
         connect();
       }, 100);
-    } else if (!isOpen && isConnected) {
-      console.log('🔌 Disconnecting WebSocket when modal closes');
+    } else if (!isOpen) {
+      console.log('🔌 Modal closed, disconnecting WebSocket');
       disconnect();
     }
     
@@ -122,21 +122,47 @@ const ChatModal = () => {
   // Handle warming up state when chat is first opened
   useEffect(() => {
     if (isOpen) {
+      console.log('🔥 Chat opened - immediately showing thinking indicator');
       setIsWarmingUp(true);
-      // Also immediately set streaming response to show thinking indicator
+      // IMMEDIATELY set streaming response to show thinking indicator
       setIsStreamingResponse(true);
+      
+      // Add an immediate startup message to show something is happening
+      const startupMessage = {
+        id: 'startup_' + Date.now(),
+        text: "Starting up Olivia AI...",
+        sender: 'assistant',
+        timestamp: new Date().toISOString(),
+        type: 'text',
+        isStartup: true
+      };
+      
+      setMessages([startupMessage]);
+      
+      // Safety timeout to clear warming up state after 15 seconds
+      const warmupTimeout = setTimeout(() => {
+        console.log('🔥 Warmup timeout - clearing warming up state');
+        setIsWarmingUp(false);
+      }, 15000);
+      
+      return () => {
+        clearTimeout(warmupTimeout);
+      };
     } else {
+      console.log('🔥 Chat closed - clearing all states');
       setIsWarmingUp(false);
       setIsStreamingResponse(false);
+      setMessages([]);
     }
   }, [isOpen]);
 
-  // Clear warming up state only when we actually receive a response
+  // Clear warming up state only when we actually receive a meaningful response
   useEffect(() => {
     if (isWarmingUp && messages.length > 0) {
-      // Check if the last message is from the assistant (AI response)
+      // Check if the last message is from the assistant and NOT the startup message
       const lastMessage = messages[messages.length - 1];
-      if (lastMessage && lastMessage.sender === 'assistant') {
+      if (lastMessage && lastMessage.sender === 'assistant' && !lastMessage.isStartup) {
+        console.log('🔥 Clearing warming up state - got real response');
         setIsWarmingUp(false);
       }
     }
@@ -175,23 +201,30 @@ const ChatModal = () => {
     switch (data.type) {
       case 'connection':
         console.log('WebSocket connection established:', data.message);
-        // Clear warming up state when connection is established
-        setIsWarmingUp(false);
+        // DON'T clear warming up state here - let it persist until we get actual content
         break;
       
       case 'stream_chunk':
+        setIsStreamingResponse(true);
+        setIsWarmingUp(false); // Clear warming up when actual content starts
         handleStreamChunk(data);
         break;
       
       case 'stream_complete':
+        setIsStreamingResponse(false);
+        setIsWarmingUp(false); // Ensure warming up is cleared
         handleStreamComplete(data);
         break;
       
       case 'explanation_chunk':
+        setIsStreamingResponse(true);
+        setIsWarmingUp(false); // Clear warming up when actual content starts
         handleExplanationChunk(data);
         break;
       
       case 'explanation_complete':
+        setIsStreamingResponse(false);
+        setIsWarmingUp(false); // Ensure warming up is cleared
         handleExplanationComplete(data);
         break;
       
@@ -332,6 +365,8 @@ const ChatModal = () => {
     const { data: chunkData } = data;
     const text = chunkData.text || '';
     
+    console.log('🟦 Explanation chunk received:', { text: text.substring(0, 100), length: text.length });
+    
     if (text) {
       // Update the explanation in real-time like stream chunks
       setMessages(prevMessages => {
@@ -359,6 +394,7 @@ const ChatModal = () => {
             isExplanation: true,
             completed: false // Mark as streaming
           };
+          console.log('🟦 Creating new explanation message:', newExplanationMessage);
           const updatedMessages = [...newMessages, newExplanationMessage];
           updateServerChatHistory(updatedMessages);
           return updatedMessages;
@@ -426,16 +462,15 @@ const ChatModal = () => {
   useEffect(() => {
     return () => {
       // Clean up WebSocket connection when component unmounts
-      if (isConnected) {
-        console.log('🔌 Disconnecting WebSocket on ChatModal unmount');
-        disconnect();
-      }
+      console.log('🔌 ChatModal unmounting, cleaning up');
+      disconnect();
       disconnectAudio();
       setWebsocketRunning(false);
       isProcessingRef.current = false;
       setIsStreamingResponse(false);
+      setIsWarmingUp(false);
     };
-  }, [disconnectAudio, disconnect, isConnected]);
+  }, [disconnectAudio, disconnect]);
 
   // Handle sendMessage flag when modal opens
   useEffect(() => {
@@ -461,8 +496,9 @@ const ChatModal = () => {
     // FOR TESTING: Reset the first message flag - uncomment this line to reset
     // localStorage.removeItem(`olivia_crypto_news_sent_${userId}`);
     
-    if (isOpen && messages.length === 0 && !hasHadInitialCryptoNews && !isProcessingRef.current) {
-      console.log('✅ Adding first message to chat');
+    // Only proceed if we have the startup message and haven't sent initial message
+    if (isOpen && messages.length === 1 && messages[0]?.isStartup && !hasHadInitialCryptoNews && !isProcessingRef.current) {
+      console.log('✅ Replacing startup message with greeting');
       
       let greetingMessage;
       
@@ -470,7 +506,7 @@ const ChatModal = () => {
       if (isServerUnavailable) {
         greetingMessage = {
           id: uuidv4(),
-          text: "Hi there! I'm currently having trouble connecting to my servers. Please try again in a few minutes. In the meantime, you can still explore your portfolio and trading features!",
+          text: "Hi there! I'm currently having trouble connecting to my servers. Please try again in a few minutes. I'll be back online soon!",
           sender: 'assistant',
           timestamp: new Date().toISOString(),
           type: 'text'
@@ -484,17 +520,22 @@ const ChatModal = () => {
           type: 'text'
         };
       } else {
-        // Still connecting
-        greetingMessage = {
-          id: uuidv4(),
-          text: "Hey there! I'm connecting to my servers to get you the latest crypto insights...",
-          sender: 'assistant',
-          timestamp: new Date().toISOString(),
-          type: 'text'
-        };
+        // Still connecting - keep the startup message a bit longer
+        setTimeout(() => {
+          const connectingMessage = {
+            id: uuidv4(),
+            text: "Hey there! I'm connecting to my servers to get you the latest insights...",
+            sender: 'assistant',
+            timestamp: new Date().toISOString(),
+            type: 'text'
+          };
+          setMessages([connectingMessage]);
+          updateServerChatHistory([connectingMessage]);
+        }, 1500);
+        return;
       }
       
-      // Add only the greeting message to chat (NO hidden user message visible)
+      // Replace startup message with greeting
       setMessages([greetingMessage]);
       updateServerChatHistory([greetingMessage]);
       
@@ -741,6 +782,7 @@ const ChatModal = () => {
             isStreamingResponse={wsIsStreamingResponse || isStreamingResponse}
             currentAction={currentAction}
             actionStatus={actionStatus}
+            isWarmingUp={isWarmingUp}
           />
 
           {/* Enhanced streaming loading indicator - disabled in favor of ThinkingIndicator */}

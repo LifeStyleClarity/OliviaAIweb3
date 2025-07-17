@@ -5,7 +5,8 @@ import PropTypes from 'prop-types';
 const ThinkingIndicator = ({ 
   processingMessage = null, 
   currentAction = null, 
-  isStreamingResponse = false 
+  isStreamingResponse = false,
+  isWarmingUp = false 
 }) => {
   const [messageIndex, setMessageIndex] = useState(0);
   const [showDots, setShowDots] = useState(true);
@@ -24,16 +25,31 @@ const ThinkingIndicator = ({
     "Let me find the best answer for you..."
   ];
 
+  // Startup-specific messages for when chat is warming up
+  const startupMessages = [
+    "Starting up Olivia AI...",
+    "Connecting to my servers...",
+    "Getting ready to help you...",
+    "Loading my knowledge base...",
+    "Preparing to assist you...",
+    "Almost ready to chat...",
+    "Setting up your session...",
+    "Warming up my systems..."
+  ];
+
   // Note: Real backend states will override these enhanced UX messages
 
-  // Cycle through messages every 3 seconds
+  // Cycle through messages - faster during startup, slower during normal thinking
   useEffect(() => {
+    const messages = isWarmingUp ? startupMessages : thinkingMessages;
+    const speed = isWarmingUp ? 1500 : 3000; // Faster cycling during startup
+    
     const interval = setInterval(() => {
-      setMessageIndex(prev => (prev + 1) % thinkingMessages.length);
-    }, 3000);
+      setMessageIndex(prev => (prev + 1) % messages.length);
+    }, speed);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isWarmingUp]);
 
   // Animate dots
   useEffect(() => {
@@ -46,7 +62,17 @@ const ThinkingIndicator = ({
 
   // Get the appropriate message and icon based on current state
   const getDisplayConfig = () => {
-    // REAL: Show actual backend processing message if available
+    // PRIORITY 1: STARTUP MODE - Show startup messages when warming up (highest priority)
+    if (isWarmingUp) {
+      return {
+        message: startupMessages[messageIndex],
+        icon: <Sparkles className="w-4 h-4 text-yellow-500 animate-pulse" />,
+        color: "text-yellow-400",
+        isReal: false
+      };
+    }
+    
+    // PRIORITY 2: REAL backend processing message if available
     if (processingMessage) {
       // Check if it's a warming up message (system startup)
       if (processingMessage.includes("Starting up")) {
@@ -168,7 +194,8 @@ const ThinkingIndicator = ({
 ThinkingIndicator.propTypes = {
   processingMessage: PropTypes.string,
   currentAction: PropTypes.string,
-  isStreamingResponse: PropTypes.bool
+  isStreamingResponse: PropTypes.bool,
+  isWarmingUp: PropTypes.bool
 };
 
 export default ThinkingIndicator; 

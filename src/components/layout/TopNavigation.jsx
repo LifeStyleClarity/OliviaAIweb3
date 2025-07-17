@@ -1,11 +1,8 @@
 // src/components/TopNavigation.jsx
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { TonConnectButton, useTonWallet } from '@tonconnect/ui-react';
 import NotificationButton from '../ui/NotificationButton';
 import AirdropButton from '../ui/AirdropButton';
-import SettingsButton from '../ui/SettingsButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWalletAuthFlow } from '../../hooks/useWalletAuthFlow';
 import { WalletAuthModal } from '../WalletAuthModal';
@@ -14,7 +11,6 @@ import { useNavigate } from 'react-router-dom';
 
 export default function TopNavigation() {
   const wallet = useTonWallet();
-  const location = useLocation();
   const { setUserAuthenticated, telegramUser, setTelegramUser, isGuestUser, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -86,18 +82,6 @@ export default function TopNavigation() {
           <div className="flex items-center gap-1">
             {!isGuestUser && <AirdropButton />}
             {!isGuestUser && <NotificationButton />}
-            <AnimatePresence mode="wait">
-              {location.pathname === '/portfolio' && !isGuestUser && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                >
-                  <SettingsButton />
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
       </div>

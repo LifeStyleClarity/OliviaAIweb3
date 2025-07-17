@@ -1,11 +1,6 @@
 import PropTypes from "prop-types";
-import Portfolio from "../AgentDataViews/Portfolio";
-import TrendingTokens from "../AgentDataViews/TrendingTokens";
-import TokenInfo from "../AgentDataViews/TokenInfo";
 import TwitterUsername from "../AgentDataViews/TwitterUsername";
-import TrendingTopics from "../AgentDataViews/TrendingTopics";
-import SwapAction from "../AgentDataViews/SwapAction";
-import MultipleTokenOptions from "../AgentDataViews/MultipleTokenOptions";
+import Button from "./Button";
 
 const ChatActionRenderer = ({
   action_type,
@@ -18,45 +13,9 @@ const ChatActionRenderer = ({
 }) => {
   if (action_type !== "action") return null;
 
-  let transformedMeta;
-
   switch (sub_action_type) {
-    case "top_trending_ton":
-      return <TrendingTokens meta={meta} />;
-    case "show_portfolio":
-      return <Portfolio meta={meta || []} />;
-    case "token_data_info":
-      // Transform the new data structure to match what TokenInfo expects
-      transformedMeta = {
-        tokenData: {
-          tokenData: meta.tokenData
-        },
-        devPostSummary: meta.devPostSummary,
-        comPostSummary: meta.comPostSummary
-      };
-      return <TokenInfo meta={transformedMeta} />;
     case "twitter_username":
       return <TwitterUsername meta={meta} />;
-    case "trending_topics":
-      return <TrendingTopics meta={meta} />;
-    case "swap":
-      return (
-        <SwapAction
-          meta={meta}
-          amount={amount}
-          swap_type={swap_type}
-          contract_address={contract_address}
-          walletAddress={meta?.walletAddress}
-        />
-      );
-    case "found_multiple_ca":
-      return (
-        <MultipleTokenOptions
-          meta={meta}
-          onSendMessage={onSendMessage}
-          swap_type={swap_type}
-        />
-      );
     
     // New action types for enhanced streaming system
     case "web_search_results":
@@ -75,6 +34,38 @@ const ChatActionRenderer = ({
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
             <span className="text-sm text-purple-700">Thinking...</span>
+          </div>
+        </div>
+      );
+      
+    case "create_icp_identity":
+      return (
+        <div className="mt-2 p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+          <div className="text-sm text-gray-700 mb-3">
+            💡 Want to save your chat history permanently? Create an ICP identity to store your conversations securely on the blockchain!
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="solid"
+              size="sm"
+              className="text-xs bg-blue-600 hover:bg-blue-700 text-white"
+              onPress={() => {
+                // Trigger the account upgrade prompt
+                if (window.showICPUpgrade) {
+                  window.showICPUpgrade();
+                }
+              }}
+            >
+              🔐 Create ICP Identity
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onPress={() => onSendMessage && onSendMessage('Maybe later')}
+            >
+              Maybe later
+            </Button>
           </div>
         </div>
       );
