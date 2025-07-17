@@ -80,7 +80,7 @@ export default function TopNavigation() {
                 </Button>
               </div>
             ) : (
-              <TonConnectButton className="!text-base bg-transparent" />
+            <TonConnectButton className="!text-base bg-transparent" />
             )}
           </div>
           <div className="flex items-center gap-1">

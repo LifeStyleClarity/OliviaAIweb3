@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '@heroui/react'
 import { Card, CardBody, CardHeader } from '@heroui/react'
 import ChatMigrationTest from '../components/ui/ChatMigrationTest'
+import ICPTestPage from '../components/ICPTestPage'
 
 export default function Tests() {
   const [activeTest, setActiveTest] = useState('migration')
@@ -12,6 +13,12 @@ export default function Tests() {
       title: 'Olivia AI Migration Test',
       description: 'Test the migration from old to new Olivia AI system',
       component: <ChatMigrationTest />
+    },
+    {
+      id: 'icp-integration',
+      title: 'ICP Integration Test',
+      description: 'Test the ICP canister integration and debug connection issues',
+      component: <ICPTestPage />
     }
   ]
 
@@ -23,7 +30,7 @@ export default function Tests() {
           Test various components and features of the OliviaAI application
         </p>
       </div>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Test Navigation */}
         <div className="md:col-span-1">
@@ -45,7 +52,7 @@ export default function Tests() {
                     {test.title}
                   </Button>
                 ))}
-              </div>
+        </div>
             </CardBody>
           </Card>
         </div>
@@ -54,14 +61,14 @@ export default function Tests() {
         <div className="md:col-span-3">
           <Card>
             <CardHeader>
-              <div>
+        <div>
                 <h3 className="text-lg font-semibold">
                   {tests.find(t => t.id === activeTest)?.title}
                 </h3>
                 <p className="text-sm text-gray-600">
                   {tests.find(t => t.id === activeTest)?.description}
                 </p>
-              </div>
+        </div>
             </CardHeader>
             <CardBody>
               {tests.find(t => t.id === activeTest)?.component}

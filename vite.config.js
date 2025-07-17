@@ -4,4 +4,11 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  define: {
+    global: 'globalThis',
+    'process.env': {},
+  },
+  optimizeDeps: {
+    include: ['@dfinity/agent', '@dfinity/candid', '@dfinity/principal', '@dfinity/identity']
+  }
 })

@@ -97,23 +97,23 @@ const ChatInput = forwardRef(({ onSendMessage, onAudioRecorded, onAgentMessage, 
                 </div>
               )}
               <div className="w-full relative group">
-                <Input
-                  ref={inputRef}
-                  type="text"
-                  variant="bordered"
+              <Input
+                ref={inputRef}
+                type="text"
+                variant="bordered"
                   radius="lg"
-                  size="lg"
+                size="lg"
                   placeholder="Ask Olivia anything... Type @ to mention agents"
-                  value={message}
-                  onValueChange={handleInputChange}
-                  classNames={{
+                value={message}
+                onValueChange={handleInputChange}
+                classNames={{
                     input: "bg-transparent py-3 text-white placeholder:text-gray-400 text-base",
-                    innerWrapper: "bg-transparent",
-                    inputWrapper: [
+                  innerWrapper: "bg-transparent",
+                  inputWrapper: [
                       "bg-gradient-to-r from-[#1a1f2e] to-[#1e2532]",
                       "hover:from-[#1f2437] hover:to-[#232a39]",
                       "group-data-[focused=true]:from-[#242b3a] group-data-[focused=true]:to-[#28303f]",
-                      "!cursor-text",
+                    "!cursor-text",
                       "border-[#fff]/10",
                       "group-data-[focused=true]:border-[#31F46E]/50",
                       "hover:border-[#fff]/20",
@@ -123,9 +123,9 @@ const ChatInput = forwardRef(({ onSendMessage, onAudioRecorded, onAgentMessage, 
                       "min-h-[56px]",
                       "group-data-[focused=true]:shadow-lg",
                       "group-data-[focused=true]:shadow-[#31F46E]/20"
-                    ]
-                  }}
-                />
+                  ]
+                }}
+              />
                 {/* Focus ring effect */}
                 <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#31F46E]/10 to-[#0AFDE1]/10 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none -z-10"></div>
               </div>
@@ -136,55 +136,55 @@ const ChatInput = forwardRef(({ onSendMessage, onAudioRecorded, onAgentMessage, 
                 {/* Gradient border effect */}
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#31F46E]/20 to-[#0AFDE1]/20 opacity-50 blur-sm"></div>
                 <div className="relative">
-                  {(() => {
-                    const agentsByType = filteredAgents.reduce((acc, agent) => {
-                      if (!acc[agent.type]) {
-                        acc[agent.type] = {
-                          type_name: agent.type_name,
-                          agents: [],
-                        };
-                      }
-                      acc[agent.type].agents.push(agent);
-                      return acc;
-                    }, {});
+                {(() => {
+                  const agentsByType = filteredAgents.reduce((acc, agent) => {
+                    if (!acc[agent.type]) {
+                      acc[agent.type] = {
+                        type_name: agent.type_name,
+                        agents: [],
+                      };
+                    }
+                    acc[agent.type].agents.push(agent);
+                    return acc;
+                  }, {});
 
-                    return Object.entries(agentsByType).map(([type, { type_name, agents: typeAgents }]) =>
-                      typeAgents.length > 0 && (
+                  return Object.entries(agentsByType).map(([type, { type_name, agents: typeAgents }]) =>
+                    typeAgents.length > 0 && (
                         <div key={type} className="mb-3 last:mb-0">
                           <div className="px-3 py-2 text-xs font-semibold text-[#31F46E]/80 uppercase tracking-wide border-b border-[#fff]/5 mb-2">
-                            {type_name}
-                          </div>
-                          {typeAgents.map((agent) => {
-                            const Icon = agent.icon;
-                            return (
-                              <button
-                                key={agent.agent_id}
-                                type="button"
-                                onClick={() => handleAgentSelect(agent.agent_id)}
+                          {type_name}
+                        </div>
+                        {typeAgents.map((agent) => {
+                          const Icon = agent.icon;
+                          return (
+                            <button
+                              key={agent.agent_id}
+                              type="button"
+                              onClick={() => handleAgentSelect(agent.agent_id)}
                                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gradient-to-r hover:from-[#31F46E]/10 hover:to-[#0AFDE1]/10 text-gray-300 hover:text-white transition-all duration-200 group"
-                                disabled={disabled}
-                              >
+                              disabled={disabled}
+                            >
                                 <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#31F46E]/20 group-hover:bg-[#31F46E]/30 transition-colors">
-                                  {typeof agent.icon === "string" ? (
-                                    <img
-                                      src={agent.icon}
-                                      alt={agent.agent_name}
+                              {typeof agent.icon === "string" ? (
+                                <img
+                                  src={agent.icon}
+                                  alt={agent.agent_name}
                                       className="w-3 h-3"
-                                    />
-                                  ) : (
+                                />
+                              ) : (
                                     <Icon className="w-3 h-3 text-[#31F46E] group-hover:text-[#0AFDE1]" />
-                                  )}
+                              )}
                                 </div>
                                 <span className="text-sm font-medium group-hover:text-white transition-colors">
-                                  {agent.agent_name}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )
-                    );
-                  })()}
+                                {agent.agent_name}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )
+                  );
+                })()}
                 </div>
               </div>
             )}
@@ -211,20 +211,20 @@ const ChatInput = forwardRef(({ onSendMessage, onAudioRecorded, onAgentMessage, 
                     <X className="w-5 h-5 text-red-400 hover:text-red-300" />
                   </Button>
                 ) : (
-                  <Button
-                    type="submit"
-                    variant="light"
-                    isIconOnly
-                    className={`min-w-unit-12 w-12 h-12 p-0 rounded-full transition-all ${
-                      !message.trim() || disabled 
-                        ? 'opacity-40 cursor-not-allowed' 
+              <Button
+                type="submit"
+                variant="light"
+                isIconOnly
+                className={`min-w-unit-12 w-12 h-12 p-0 rounded-full transition-all ${
+                  !message.trim() || disabled 
+                    ? 'opacity-40 cursor-not-allowed' 
                         : 'hover:scale-105 active:scale-95 hover:bg-gradient-to-r hover:from-[#31F46E]/20 hover:to-[#0AFDE1]/20'
-                    }`}
-                    disabled={!message.trim() || disabled}
-                    onPress={handleSubmit}
-                  >
+                }`}
+                disabled={!message.trim() || disabled}
+                onPress={handleSubmit}
+              >
                     <Send className={`w-5 h-5 transition-colors ${!message.trim() || disabled ? 'text-gray-400' : 'text-[#31F46E] hover:text-[#0AFDE1]'}`} />
-                  </Button>
+              </Button>
                 )}
               </>
             )}

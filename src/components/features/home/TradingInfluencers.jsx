@@ -43,19 +43,19 @@ export default function TradingInfluencers() {
             }
           ]);
         } else {
-          const data = await socialService.getInfluencers();
-          // Get top 3 influencers with their most mentioned cashtag
-          const topInfluencers = data
-            .slice(0, 3)
-            .map(({ influencer, cashtags }) => ({
-              id: influencer.id,
-              name: influencer.username,
-              handle: `@${influencer.username}`,
-              image: influencer.avatar_image,
-              tag: cashtags?.length > 0 ? `$${cashtags[0].cashtag}` : '$TON',
-              tagColor: '#4ED342' // Keep consistent green color
-            }));
-          setInfluencers(topInfluencers);
+        const data = await socialService.getInfluencers();
+        // Get top 3 influencers with their most mentioned cashtag
+        const topInfluencers = data
+          .slice(0, 3)
+          .map(({ influencer, cashtags }) => ({
+            id: influencer.id,
+            name: influencer.username,
+            handle: `@${influencer.username}`,
+            image: influencer.avatar_image,
+            tag: cashtags?.length > 0 ? `$${cashtags[0].cashtag}` : '$TON',
+            tagColor: '#4ED342' // Keep consistent green color
+          }));
+        setInfluencers(topInfluencers);
         }
       } catch (error) {
         // Silently handle errors for guest users

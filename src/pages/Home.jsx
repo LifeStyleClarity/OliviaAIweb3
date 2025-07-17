@@ -3,6 +3,7 @@ import QuickActions from '../components/features/home/QuickActions'
 import TradingTokens from '../components/features/home/TradingTokens'
 import TradingInfluencers from '../components/features/home/TradingInfluencers'
 import TrendingSentiment from '../components/features/home/TrendingSentiment'
+import ICPStoredMessages from '../components/features/home/ICPStoredMessages'
 
 export default function Home() {
   return (
@@ -10,6 +11,7 @@ export default function Home() {
       {/* Blur sphere */}
       <PortfolioValue />
       <QuickActions />
+      <ICPStoredMessages />
       <TradingTokens />
       <TradingInfluencers />
       <TrendingSentiment />

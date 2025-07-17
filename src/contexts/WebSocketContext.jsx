@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useRef, useCallback, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
+import icpService from '../api/services/icp.service';
 
 const WebSocketContext = createContext();
 
@@ -20,6 +21,7 @@ export const WebSocketProvider = ({ children }) => {
   const requestIdRef = useRef(0);
   const pendingRequestsRef = useRef(new Map());
   const reconnectTimeoutRef = useRef(null);
+  const pendingMessagesRef = useRef(new Map()); // Use ref instead of state
   
   const [isConnected, setIsConnected] = useState(false);
   const [connectionAttempts, setConnectionAttempts] = useState(0);
@@ -30,6 +32,11 @@ export const WebSocketProvider = ({ children }) => {
   const [isStreamingResponse, setIsStreamingResponse] = useState(false);
   const [shouldReconnect, setShouldReconnect] = useState(false);
   const [isServerUnavailable, setIsServerUnavailable] = useState(false);
+  
+  // ICP Storage related state
+  const [icpInitialized, setIcpInitialized] = useState(false);
+  const [icpUser, setIcpUser] = useState(null);
+  const [conversationId, setConversationId] = useState(null);
   
   const { userData, userAuthenticated, isGuestUser } = useAuth();
 
@@ -56,6 +63,121 @@ export const WebSocketProvider = ({ children }) => {
     return `req_${++requestIdRef.current}_${Date.now()}`;
   };
 
+  // Generate conversation ID
+  const generateConversationId = () => {
+    return `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  };
+
+  // Initialize ICP and create/get user
+  const initializeICP = useCallback(async () => {
+    if (icpInitialized) {
+      console.log('🟦 ICP already initialized');
+      return;
+    }
+    
+    try {
+      console.log('🟦 Initializing ICP for user...', { userData, isGuestUser });
+      
+      // Test ICP connection first
+      const connectionTest = await icpService.testConnection();
+      if (!connectionTest.success) {
+        console.error('🟦 ICP connection failed:', connectionTest.error);
+        return;
+      }
+      
+      console.log('🟦 ICP connection test successful:', connectionTest.message);
+      
+      // Try to get existing user
+      let user = await icpService.getUser();
+      
+      if (!user.success) {
+        console.log('🟦 Creating new ICP user...');
+        // Create new user based on auth data
+        if (userData && !isGuestUser) {
+          const [firstName = '', ...lastNameParts] = (userData.contact_name || '').split(' ');
+          const lastName = lastNameParts.join(' ');
+          
+          user = await icpService.createUser(
+            firstName || userData.first_name || 'User',
+            lastName || userData.last_name || '',
+            userData.contact_email || userData.email || '',
+            userData.telegram_id || null,
+            userData.crypto_wallet_address || null
+          );
+        } else {
+          console.log('🟦 Creating guest user...');
+          // Create guest user
+          user = await icpService.createGuestUser();
+        }
+      }
+      
+      if (user.success) {
+        setIcpUser(user.user);
+        setIcpInitialized(true);
+        
+        // Generate conversation ID for this session
+        if (!conversationId) {
+          const newConversationId = generateConversationId();
+          setConversationId(newConversationId);
+          console.log('🟦 Generated conversation ID:', newConversationId);
+        }
+        
+        console.log('🟦 ICP user initialized successfully:', user.user);
+      } else {
+        console.error('🟦 Failed to create/get ICP user:', user.error);
+      }
+    } catch (error) {
+      console.error('🟦 ICP initialization error:', error);
+    }
+  }, [userData, isGuestUser, icpInitialized, conversationId]);
+
+  // Save message to ICP
+  const saveToICP = useCallback(async (userMessage, aiResponse, requestId) => {
+    console.log('🟦 saveToICP called with:', { 
+      userMessage, 
+      aiResponse, 
+      requestId,
+      icpInitialized,
+      icpUser: icpUser?.id,
+      conversationId,
+      pendingMessagesCount: pendingMessagesRef.current.size
+    });
+    
+    if (!icpInitialized || !icpUser || !conversationId) {
+      console.log('🟦 ICP not ready, skipping save', {
+        icpInitialized,
+        hasIcpUser: !!icpUser,
+        hasConversationId: !!conversationId
+      });
+      return;
+    }
+    
+    try {
+      console.log('🟦 Saving message to ICP:', { userMessage, aiResponse, requestId });
+      
+      const messageId = `msg_${requestId}_${Date.now()}`;
+      const result = await icpService.saveMessage(
+        messageId,
+        userMessage,
+        aiResponse,
+        conversationId,
+        true, // searchEnabled
+        false // imageEnabled
+      );
+      
+      if (result.success) {
+        console.log('🟦 Message saved to ICP successfully:', result.message);
+        
+        // Remove from pending messages
+        pendingMessagesRef.current.delete(requestId);
+      } else {
+        console.error('🟦 Failed to save message to ICP:', result.error);
+      }
+    } catch (error) {
+      console.error('🟦 Error saving to ICP:', error);
+    }
+  }, [icpInitialized, icpUser, conversationId]);
+
   // Extract user options for WebSocket messages
   const extractUserOptions = useCallback(() => {
     const contactName = userData?.contact_name || '';
@@ -81,6 +203,39 @@ export const WebSocketProvider = ({ children }) => {
         break;
       case 'stream_complete':
         setIsStreamingResponse(false);
+        // Save completed message to ICP
+        console.log('🟦 Stream complete received:', { 
+          requestId: data.requestId, 
+          hasData: !!data.data,
+          pendingMessagesCount: pendingMessagesRef.current.size,
+          allPendingKeys: Array.from(pendingMessagesRef.current.keys())
+        });
+        
+        if (data.requestId && data.data) {
+          const pendingMessage = pendingMessagesRef.current.get(data.requestId);
+          console.log('🟦 Found pending message:', { 
+            hasPendingMessage: !!pendingMessage,
+            pendingMessage,
+            requestId: data.requestId
+          });
+          
+          if (pendingMessage) {
+            const aiResponse = data.data.fullResponse || data.data.text || '';
+            console.log('🟦 Calling saveToICP with:', {
+              userMessage: pendingMessage.userMessage,
+              aiResponse: aiResponse.substring(0, 100) + '...',
+              requestId: data.requestId
+            });
+            saveToICP(pendingMessage.userMessage, aiResponse, data.requestId);
+          } else {
+            console.log('🟦 No pending message found for requestId:', data.requestId);
+          }
+        } else {
+          console.log('🟦 Missing requestId or data in stream_complete:', { 
+            hasRequestId: !!data.requestId,
+            hasData: !!data.data
+          });
+        }
         break;
       case 'explanation_chunk':
         setIsStreamingResponse(true);
@@ -100,7 +255,9 @@ export const WebSocketProvider = ({ children }) => {
         break;
       case 'connection':
         console.log('✅ WebSocket connection established:', data.message);
-        // Connection is ready, no additional action needed
+        // Connection is ready, initialize ICP
+        console.log('🟦 WebSocket connected, calling initializeICP...');
+        initializeICP();
         break;
       case 'text':
         console.log('📝 Received text message:', data);
@@ -122,7 +279,7 @@ export const WebSocketProvider = ({ children }) => {
         console.error('Error in message handler:', error);
       }
     });
-  }, []);
+  }, [initializeICP, saveToICP]);
 
   const connectWebSocket = useCallback(() => {
     if (isConnecting || wsRef.current?.readyState === WebSocket.OPEN) {
@@ -315,8 +472,25 @@ export const WebSocketProvider = ({ children }) => {
       console.log('📡 Sending WebSocket message:', messageData);
       wsRef.current.send(JSON.stringify(messageData));
       pendingRequestsRef.current.set(requestId, { content: message, timestamp: Date.now() });
+      
+      // Track for ICP storage
+      pendingMessagesRef.current.set(requestId, { 
+        userMessage: message, 
+        timestamp: Date.now(),
+        searchEnabled,
+        imageEnabled
+      });
+      
+      console.log('🟦 Added message to pending:', { 
+        requestId,
+        message: message.substring(0, 50) + '...',
+        pendingCount: pendingMessagesRef.current.size
+      });
+      
       console.log('✅ Message sent successfully with requestId:', requestId);
-      return true;
+      
+      // Return the requestId so upgrade tracking can be done by the caller
+      return requestId;
     } catch (error) {
       console.error('Error sending message:', error);
       return false;
@@ -351,6 +525,13 @@ export const WebSocketProvider = ({ children }) => {
       connectWebSocket();
     }
   }, [isConnected, isConnecting, shouldReconnect, isServerUnavailable, currentEndpointIndex, connectWebSocket]);
+
+  // Initialize ICP when user data changes
+  useEffect(() => {
+    if (userData || isGuestUser) {
+      initializeICP();
+    }
+  }, [userData, isGuestUser, initializeICP]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -389,7 +570,13 @@ export const WebSocketProvider = ({ children }) => {
     disconnect: disconnectWebSocket,
     cancelStreamingResponse,
     generateRequestId,
-    pendingRequests: pendingRequestsRef.current
+    pendingRequests: pendingRequestsRef.current,
+    // ICP Storage
+    icpInitialized,
+    icpUser,
+    conversationId,
+    initializeICP,
+    saveToICP
   };
 
   return (

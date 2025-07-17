@@ -3,7 +3,9 @@ import { useState, useEffect } from 'react'
 import TopNavigation from './TopNavigation'
 import BottomNavigation from './BottomNavigation'
 import WelcomeDrawer from '../ui/WelcomeDrawer'
+import AccountUpgradePrompt from '../ui/AccountUpgradePrompt'
 import { useAuth } from '../../contexts/AuthContext'
+import { useAccountUpgrade } from '../../hooks/useAccountUpgrade'
 
 export default function Layout() {
   const [showWelcomeDrawer, setShowWelcomeDrawer] = useState(false)
@@ -11,6 +13,13 @@ export default function Layout() {
   // Check if the current pathname is '/game'
   const isGamePage = location.pathname === '/game'
   const { telegramUser, setTelegramUser, userData, setUserData, isGuestUser } = useAuth();
+  
+  // Account upgrade flow
+  const { 
+    shouldShowUpgrade, 
+    dismissUpgradePrompt, 
+    handleUpgradeSuccess 
+  } = useAccountUpgrade();
 
   useEffect(() => {
     // Don't show welcome drawer for guest users
@@ -58,6 +67,13 @@ export default function Layout() {
       < WelcomeDrawer
         isOpen={showWelcomeDrawer}
         onClose={() => setShowWelcomeDrawer(false)}
+      />
+
+      {/* Account Upgrade Prompt */}
+      <AccountUpgradePrompt
+        isOpen={shouldShowUpgrade}
+        onClose={dismissUpgradePrompt}
+        onUpgradeSuccess={handleUpgradeSuccess}
       />
     </div>
   )

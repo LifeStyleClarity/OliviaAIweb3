@@ -6,6 +6,7 @@ import LandingPage from './pages/LandingPage';
 import Explore from './pages/Explore';
 import Portfolio from './pages/Portfolio';
 import Game from './pages/Game';
+import Tests from './pages/Tests';
 import Layout from './components/layout/Layout';
 import { PrivateRoute, PublicRoute } from './components/auth/RouteGuards';
 import { useState, useEffect } from 'react';
@@ -65,6 +66,7 @@ function App() {
               }
             />
             <Route element={<PrivateRoute />}>
+              <Route path="/tests" element={<Tests />} />
               <Route element={<Layout />}>
                 <Route path="/home" element={<Home />} />
                 <Route path="/explore" element={<Explore />} />

@@ -8,6 +8,7 @@ import useAudioWebSocket from '../../hooks/useAudioWebSocket';
 import { chatService } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWebSocket } from '../../contexts/WebSocketContext';
+import { useAccountUpgrade } from '../../hooks/useAccountUpgrade';
 import { v4 as uuidv4 } from 'uuid';
 import StreamingLoadingIndicator from './StreamingLoadingIndicator';
 import SourcesDrawer from './SourcesDrawer';
@@ -21,6 +22,9 @@ const ChatModal = () => {
   const isProcessingRef = useRef(false);
   const { userData, isGuestUser } = useAuth();
   const { isConnected, isConnecting, sendMessage, currentAction, actionStatus, isStreamingResponse: wsIsStreamingResponse, cancelStreamingResponse, connect, disconnect, wsError, isServerUnavailable, currentEndpointIndex, wsEndpoints } = useWebSocket();
+  
+  // Import upgrade tracking hook
+  const { trackMessage } = useAccountUpgrade();
   
   // New streaming states
   const [useStreamingMode, setUseStreamingMode] = useState(true); // Toggle between old and new system
@@ -421,12 +425,17 @@ const ChatModal = () => {
 
   useEffect(() => {
     return () => {
+      // Clean up WebSocket connection when component unmounts
+      if (isConnected) {
+        console.log('🔌 Disconnecting WebSocket on ChatModal unmount');
+        disconnect();
+      }
       disconnectAudio();
       setWebsocketRunning(false);
       isProcessingRef.current = false;
       setIsStreamingResponse(false);
     };
-  }, [disconnectAudio]);
+  }, [disconnectAudio, disconnect, isConnected]);
 
   // Handle sendMessage flag when modal opens
   useEffect(() => {
@@ -511,7 +520,7 @@ const ChatModal = () => {
           try {
             // Add a small delay to ensure WebSocket is fully ready
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             // Format conversation history correctly for the WebSocket
             const conversationHistory = [
               { role: 'assistant', content: greetingMessage.text }
@@ -532,7 +541,7 @@ const ChatModal = () => {
                  localStorage.setItem(`olivia_crypto_news_sent_${userData?.user_id || 'guest'}`, 'true');
                }
              }
-          } catch (error) {
+      } catch (error) {
             console.error('Failed to send search message:', error);
           }
         };
@@ -579,6 +588,11 @@ const ChatModal = () => {
       
       if (!sent) {
         throw new Error('Failed to send message - WebSocket not connected');
+      }
+      
+      // Track message for upgrade flow (only for guest users)
+      if (isGuestUser) {
+        trackMessage();
       }
 
       // Set a timeout to clear the streaming state if no response comes back
@@ -706,7 +720,7 @@ const ChatModal = () => {
                       Retry
                     </button>
                   )}
-                </div>
+              </div>
               )}
             </div>
           </div>
@@ -721,7 +735,7 @@ const ChatModal = () => {
               const updatedMessages = [...messages];
               updatedMessages[index] = { ...updatedMessages[index], ...updates };
               setMessages(updatedMessages);
-              updateServerChatHistory(updatedMessages);
+                updateServerChatHistory(updatedMessages);
             }}
             useStreamingMode={useStreamingMode}
             isStreamingResponse={wsIsStreamingResponse || isStreamingResponse}
@@ -736,7 +750,7 @@ const ChatModal = () => {
               currentAction={currentAction}
               actionStatus={actionStatus}
               isStreamingResponse={wsIsStreamingResponse || isStreamingResponse}
-            />
+          />
           )} */}
 
           {/* Sources drawer */}

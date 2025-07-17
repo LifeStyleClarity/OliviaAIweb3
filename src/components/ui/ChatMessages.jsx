@@ -146,16 +146,16 @@ const ChatMessages = ({
                         components={{
                           img: ({ src, alt, ...props }) => {
                             return (
-                              <img
-                                {...props}
+                            <img
+                              {...props}
                                 src={src}
                                 alt={alt}
-                                style={{
+                              style={{
                                   maxWidth: "200px",
                                   maxHeight: "200px",
                                   width: "auto",
                                   height: "auto",
-                                  objectFit: "contain",
+                                objectFit: "contain",
                                   display: "block",
                                   margin: "8px 0",
                                   borderRadius: "8px",
@@ -187,8 +187,8 @@ const ChatMessages = ({
                                   `;
                                   placeholder.title = alt || "Image failed to load";
                                   e.target.parentNode.insertBefore(placeholder, e.target);
-                                }}
-                              />
+                              }}
+                            />
                             );
                           },
                           a: ({ ...props }) => (

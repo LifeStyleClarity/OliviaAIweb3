@@ -22,13 +22,13 @@ export default function TradingTokens() {
             { id: 4, name: 'USDT', image: '/tonicon.webp', mentions: 400 }
           ]);
         } else {
-          const topTokens = await socialService.getTopMentionedTokens(4);
-          setTokens(topTokens.map(token => ({
-            id: token.data.id,
-            name: token.data.token_symbol,
-            image: token.data.token_icon,
-            mentions: token.totalMentions || 0
-          })));
+        const topTokens = await socialService.getTopMentionedTokens(4);
+        setTokens(topTokens.map(token => ({
+          id: token.data.id,
+          name: token.data.token_symbol,
+          image: token.data.token_icon,
+          mentions: token.totalMentions || 0
+        })));
         }
       } catch (error) {
         // Silently handle errors for guest users

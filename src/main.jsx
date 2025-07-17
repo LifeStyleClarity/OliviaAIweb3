@@ -18,10 +18,10 @@ import TelegramAnalytics from '@telegram-apps/analytics'
 // Only initialize Telegram analytics if running inside Telegram
 if (window.Telegram?.WebApp) {
   try {
-    TelegramAnalytics.init({
-      token: import.meta.env.VITE_TG_ANAL_TOKEN,
-      appName: import.meta.env.VITE_TG_ANAL_APP_NAME,
-    });
+TelegramAnalytics.init({
+  token: import.meta.env.VITE_TG_ANAL_TOKEN,
+  appName: import.meta.env.VITE_TG_ANAL_APP_NAME,
+});
   } catch (error) {
     console.log('Telegram analytics not available in browser environment');
   }
@@ -35,16 +35,16 @@ createRoot(document.getElementById('root')).render(
         <BrowserRouter>
           <AuthProviderLogin>
             <WebSocketProvider>
-              <ChatProvider>
-                <TokenInfluencerProvider>
-                  <main className="dark text-foreground bg-background">
+            <ChatProvider>
+              <TokenInfluencerProvider>
+                <main className="dark text-foreground bg-background">
                     <ErrorBoundary>
                       <ConditionalChatModal />
                     </ErrorBoundary>
-                    <App />
-                  </main>
-                </TokenInfluencerProvider>
-              </ChatProvider>
+                  <App />
+                </main>
+              </TokenInfluencerProvider>
+            </ChatProvider>
             </WebSocketProvider>
           </AuthProviderLogin>
         </BrowserRouter>
