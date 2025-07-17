@@ -26,17 +26,32 @@ export const useAccountUpgrade = () => {
 
   // Initialize session tracking
   useEffect(() => {
+    console.log('🔄 Initialize session tracking:', { isGuestUser });
+    
     if (isGuestUser) {
       // Track session start time
       const sessionStart = localStorage.getItem(STORAGE_KEYS.SESSION_START);
+      const savedCount = localStorage.getItem(STORAGE_KEYS.MESSAGE_COUNT);
+      const wasDismissed = localStorage.getItem(STORAGE_KEYS.UPGRADE_DISMISSED);
+      const lastShown = localStorage.getItem(STORAGE_KEYS.UPGRADE_LAST_SHOWN);
+      
+      console.log('💾 localStorage state:', {
+        sessionStart,
+        savedCount,
+        wasDismissed,
+        lastShown
+      });
+      
       if (!sessionStart) {
         localStorage.setItem(STORAGE_KEYS.SESSION_START, Date.now().toString());
+        console.log('🕐 Set new session start time');
       }
 
       // Load message count
-      const savedCount = localStorage.getItem(STORAGE_KEYS.MESSAGE_COUNT);
       if (savedCount) {
-        setMessageCount(parseInt(savedCount, 10));
+        const count = parseInt(savedCount, 10);
+        setMessageCount(count);
+        console.log('📊 Loaded saved message count:', count);
       }
 
       // Check if account can be upgraded
@@ -57,42 +72,93 @@ export const useAccountUpgrade = () => {
 
   // Track when user sends a message
   const trackMessage = useCallback(() => {
-    if (!isGuestUser) return;
+    console.log('🧪 trackMessage called!', { isGuestUser, canUpgrade, messageCount });
+    
+    if (!isGuestUser) {
+      console.log('❌ Not a guest user, skipping track');
+      return;
+    }
 
     const newCount = messageCount + 1;
+    console.log('📊 Message count:', { oldCount: messageCount, newCount });
+    
     setMessageCount(newCount);
     localStorage.setItem(STORAGE_KEYS.MESSAGE_COUNT, newCount.toString());
 
     // Check if we should show upgrade prompt
     checkUpgradeConditions(newCount);
-  }, [messageCount, isGuestUser]);
+  }, [messageCount, isGuestUser, canUpgrade]);
+
+  // Send ICP identity creation message to chat
+  const sendICPCreationMessage = useCallback(() => {
+    console.log('📧 sendICPCreationMessage called!');
+    console.log('🪟 window.sendChatMessage exists?', typeof window !== 'undefined' && !!window.sendChatMessage);
+    
+    if (typeof window !== 'undefined' && window.sendChatMessage) {
+      console.log('✅ Sending ICP creation message to chat!');
+      window.sendChatMessage({
+        message: "Hey! I've been enjoying our conversation so far! 😊\n\nI have an idea - if you create an ICP identity, I can save all our conversations so I can remember everything we've talked about. This means:\n\n• I'll remember your preferences and past discussions\n• Our conversations will be saved permanently on the blockchain\n• I can learn your communication style and work better for you over time\n• You'll never lose our chat history, even if you switch devices\n\nIt only takes 2 minutes and uses your device's Face ID or Touch ID - no passwords needed!\n\nWant me to help you set this up? I think it would really improve how I can assist you! 🚀",
+        action: {
+          type: "create_icp_identity"
+        }
+      });
+    } else {
+      console.log('❌ window.sendChatMessage not available');
+    }
+  }, []);
 
   // Check if upgrade conditions are met
   const checkUpgradeConditions = useCallback((currentMessageCount = messageCount) => {
-    if (!isGuestUser || !canUpgrade) return;
+    console.log('🔍 checkUpgradeConditions called!', { 
+      isGuestUser, 
+      canUpgrade, 
+      currentMessageCount, 
+      messageCount 
+    });
+    
+    if (!isGuestUser || !canUpgrade) {
+      console.log('❌ Conditions not met:', { isGuestUser, canUpgrade });
+      return;
+    }
 
     const now = Date.now();
     const sessionStart = parseInt(localStorage.getItem(STORAGE_KEYS.SESSION_START) || '0', 10);
     const lastShown = parseInt(localStorage.getItem(STORAGE_KEYS.UPGRADE_LAST_SHOWN) || '0', 10);
     const wasDismissed = localStorage.getItem(STORAGE_KEYS.UPGRADE_DISMISSED) === 'true';
 
+    console.log('📋 Upgrade state:', { 
+      now, 
+      sessionStart, 
+      lastShown, 
+      wasDismissed,
+      timeSinceLastShown: now - lastShown,
+      retryDelay: UPGRADE_TRIGGERS.RETRY_DELAY
+    });
+
     // Don't show if recently dismissed
     if (wasDismissed && (now - lastShown) < UPGRADE_TRIGGERS.RETRY_DELAY) {
+      console.log('⏰ Recently dismissed, skipping');
       return;
     }
 
-    // Show based on message count
-    if (currentMessageCount >= UPGRADE_TRIGGERS.MESSAGE_COUNT) {
-      setShouldShowUpgrade(true);
+    // Show based on message count (changed from 5 to 3)
+    if (currentMessageCount >= 3) {
+      console.log('✅ Message count trigger! Sending ICP creation message');
+      sendICPCreationMessage();
+      localStorage.setItem(STORAGE_KEYS.UPGRADE_LAST_SHOWN, now.toString());
       return;
     }
 
     // Show based on time spent
     if (sessionStart && (now - sessionStart) >= UPGRADE_TRIGGERS.TIME_THRESHOLD) {
-      setShouldShowUpgrade(true);
+      console.log('✅ Time trigger! Sending ICP creation message');
+      sendICPCreationMessage();
+      localStorage.setItem(STORAGE_KEYS.UPGRADE_LAST_SHOWN, now.toString());
       return;
     }
-  }, [isGuestUser, canUpgrade, messageCount]);
+
+    console.log('⏳ No triggers met yet');
+  }, [isGuestUser, canUpgrade, messageCount, sendICPCreationMessage]);
 
   // Handle when user dismisses the prompt
   const dismissUpgradePrompt = useCallback(() => {

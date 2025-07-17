@@ -18,7 +18,7 @@ export default function Home() {
   const inputRef = useRef(null)
   const { userData, isGuestUser } = useAuth()
   const { isConnected, sendMessage, subscribe, connect } = useWebSocket()
-  const { forceShowUpgrade } = useAccountUpgrade();
+  const { forceShowUpgrade } = useAccountUpgrade(); // ICP upgrade
 
   // Track mouse position
   useEffect(() => {

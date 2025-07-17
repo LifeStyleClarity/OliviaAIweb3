@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import LandingPage from './pages/LandingPage';
 import Tests from './pages/Tests';
+import ICPSetup from './pages/ICPSetup';
 import Layout from './components/layout/Layout';
 import { PrivateRoute, PublicRoute } from './components/auth/RouteGuards';
 import { useState, useEffect } from 'react';
@@ -59,6 +60,14 @@ function App() {
               element={
                 <PublicRoute>
                   <Login />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/icp-setup"
+              element={
+                <PublicRoute>
+                  <ICPSetup />
                 </PublicRoute>
               }
             />

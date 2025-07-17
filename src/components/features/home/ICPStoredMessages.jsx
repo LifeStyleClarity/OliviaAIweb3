@@ -62,41 +62,7 @@ const ICPStoredMessages = () => {
     }
   };
 
-  const createTestUser = async () => {
-    try {
-      const result = await icpService.createUser('Test', 'User', 'test@example.com');
-      if (result.success) {
-        console.log('Test user created:', result.user);
-        await initializeICP(); // Refresh data
-      } else {
-        console.error('Failed to create test user:', result.error);
-      }
-    } catch (err) {
-      console.error('Error creating test user:', err);
-    }
-  };
-
-  const createTestMessage = async () => {
-    try {
-      const messageId = `test_${Date.now()}`;
-      const result = await icpService.saveMessage(
-        messageId,
-        'Test message from frontend',
-        'This is a test response from the AI',
-        'test_conversation',
-        true,
-        false
-      );
-      if (result.success) {
-        console.log('Test message saved:', result.message);
-        await initializeICP(); // Refresh data
-      } else {
-        console.error('Failed to save test message:', result.error);
-      }
-    } catch (err) {
-      console.error('Error saving test message:', err);
-    }
-  };
+  // Test functions removed - only real conversations should be recorded
 
   const formatTimestamp = (timestamp) => {
     // Convert nanoseconds to milliseconds
@@ -154,18 +120,7 @@ const ICPStoredMessages = () => {
             >
               {loading ? '🔄 Refreshing...' : '🔄 Refresh'}
             </button>
-            <button
-              onClick={createTestUser}
-              className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-sm hover:bg-blue-500/30 transition-colors"
-            >
-              Create Test User
-            </button>
-            <button
-              onClick={createTestMessage}
-              className="px-3 py-1 bg-green-500/20 text-green-400 rounded-lg text-sm hover:bg-green-500/30 transition-colors"
-            >
-              Save Test Message
-            </button>
+            {/* Test buttons removed - only real conversations should be recorded */}
           </div>
 
           {/* Messages */}
@@ -253,18 +208,7 @@ const ICPStoredMessages = () => {
             >
               {loading ? '🔄 Refreshing...' : '🔄 Refresh'}
             </button>
-            <button
-              onClick={createTestUser}
-              className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-sm hover:bg-blue-500/30 transition-colors"
-            >
-              Create Test User
-            </button>
-            <button
-              onClick={createTestMessage}
-              className="px-3 py-1 bg-green-500/20 text-green-400 rounded-lg text-sm hover:bg-green-500/30 transition-colors"
-            >
-              Save Test Message
-            </button>
+            {/* Test buttons removed - only real conversations should be recorded */}
           </div>
 
           {/* All Stored Messages */}

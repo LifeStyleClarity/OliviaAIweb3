@@ -31,20 +31,7 @@ const ICPTestPage = () => {
     }
   };
 
-  const createTestUser = async () => {
-    addLog('Creating test user...');
-    try {
-      const result = await icpService.createUser('Test', 'User', 'test@example.com');
-      if (result.success) {
-        setUser(result.user);
-        addLog(`✅ User created: ${result.user.id}`);
-      } else {
-        addLog(`❌ User creation failed: ${result.error}`);
-      }
-    } catch (error) {
-      addLog(`❌ User creation error: ${error.message}`);
-    }
-  };
+  // Test user creation removed - only real conversations should be recorded
 
   const createGuestUser = async () => {
     addLog('Creating guest user...');
@@ -170,12 +157,7 @@ const ICPTestPage = () => {
         <div className="bg-gray-800 rounded-lg p-4 mb-6">
           <h3 className="font-semibold mb-4">User Management</h3>
           <div className="flex gap-2 mb-4">
-            <button
-              onClick={createTestUser}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg"
-            >
-              Create Test User
-            </button>
+            {/* Test user button removed - only real conversations should be recorded */}
             <button
               onClick={createGuestUser}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg"

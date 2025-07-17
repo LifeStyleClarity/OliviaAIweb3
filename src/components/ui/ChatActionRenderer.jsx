@@ -1,6 +1,7 @@
 import PropTypes from "prop-types";
 import TwitterUsername from "../AgentDataViews/TwitterUsername";
 import Button from "./Button";
+import InlineICPIdentityCreator from "./InlineICPIdentityCreator";
 
 const ChatActionRenderer = ({
   action_type,
@@ -39,36 +40,7 @@ const ChatActionRenderer = ({
       );
       
     case "create_icp_identity":
-      return (
-        <div className="mt-2 p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
-          <div className="text-sm text-gray-700 mb-3">
-            💡 Want to save your chat history permanently? Create an ICP identity to store your conversations securely on the blockchain!
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="solid"
-              size="sm"
-              className="text-xs bg-blue-600 hover:bg-blue-700 text-white"
-              onPress={() => {
-                // Trigger the account upgrade prompt
-                if (window.showICPUpgrade) {
-                  window.showICPUpgrade();
-                }
-              }}
-            >
-              🔐 Create ICP Identity
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onPress={() => onSendMessage && onSendMessage('Maybe later')}
-            >
-              Maybe later
-            </Button>
-          </div>
-        </div>
-      );
+      return <InlineICPIdentityCreator onSendMessage={onSendMessage} />;
       
     default:
       return null;

@@ -131,6 +131,56 @@ export const WebSocketProvider = ({ children }) => {
     }
   }, [userData, isGuestUser, icpInitialized, conversationId]);
 
+  // Retrieve conversation history from ICP
+  const getConversationHistory = useCallback(async (limit = 10) => {
+    if (!icpInitialized || !icpUser || !conversationId) {
+      console.log('🟦 ICP not ready for history retrieval');
+      return [];
+    }
+    
+    try {
+      console.log('🟦 Retrieving conversation history from ICP...');
+      
+      // Get messages for this conversation
+      const result = await icpService.getConversationMessages(conversationId);
+      
+      if (result.success && result.messages) {
+        // Sort messages by timestamp (oldest first)
+        const sortedMessages = result.messages.sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+        
+        // Take the most recent messages (limit)
+        const recentMessages = sortedMessages.slice(-limit);
+        
+        // Format for AI agent (alternating user/assistant messages)
+        const formattedHistory = [];
+        recentMessages.forEach(msg => {
+          formattedHistory.push({
+            role: 'user',
+            content: msg.userMessage
+          });
+          formattedHistory.push({
+            role: 'assistant', 
+            content: msg.aiResponse
+          });
+        });
+        
+        console.log('🟦 Retrieved conversation history:', {
+          totalMessages: result.messages.length,
+          recentMessages: recentMessages.length,
+          formattedHistory: formattedHistory.length
+        });
+        
+        return formattedHistory;
+      } else {
+        console.log('🟦 No conversation history found or failed to retrieve');
+        return [];
+      }
+    } catch (error) {
+      console.error('🟦 Error retrieving conversation history:', error);
+      return [];
+    }
+  }, [icpInitialized, icpUser, conversationId]);
+
   // Save message to ICP
   const saveToICP = useCallback(async (userMessage, aiResponse, requestId) => {
     console.log('🟦 saveToICP called with:', { 
@@ -452,13 +502,23 @@ export const WebSocketProvider = ({ children }) => {
     const requestId = generateRequestId();
     const userOptions = extractUserOptions();
     
+    // Retrieve conversation history from ICP if not provided
+    let historyToSend = conversationHistory;
+    if (historyToSend.length === 0) {
+      historyToSend = await getConversationHistory(10); // Get last 10 message pairs
+      console.log('🟦 Retrieved conversation history for AI context:', {
+        historyLength: historyToSend.length,
+        hasHistory: historyToSend.length > 0
+      });
+    }
+    
     const messageData = {
       type: 'text',
       requestId,
       data: {
         model: MODEL_NAME,
         text: message,
-        messages: conversationHistory,
+        messages: historyToSend,
         options: {
           agentId: AGENT_ID,
           search_available: searchEnabled,
@@ -469,7 +529,13 @@ export const WebSocketProvider = ({ children }) => {
     };
 
     try {
-      console.log('📡 Sending WebSocket message:', messageData);
+      console.log('📡 Sending WebSocket message with history:', {
+        ...messageData,
+        data: {
+          ...messageData.data,
+          messages: `[${historyToSend.length} history messages]`
+        }
+      });
       wsRef.current.send(JSON.stringify(messageData));
       pendingRequestsRef.current.set(requestId, { content: message, timestamp: Date.now() });
       
@@ -495,7 +561,7 @@ export const WebSocketProvider = ({ children }) => {
       console.error('Error sending message:', error);
       return false;
     }
-  }, [extractUserOptions]);
+  }, [extractUserOptions, getConversationHistory]);
 
   // Send WebSocket message function (for compatibility)
   const sendWebSocketMessage = useCallback((message) => {
@@ -576,7 +642,8 @@ export const WebSocketProvider = ({ children }) => {
     icpUser,
     conversationId,
     initializeICP,
-    saveToICP
+    saveToICP,
+    getConversationHistory
   };
 
   return (

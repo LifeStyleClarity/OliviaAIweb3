@@ -15,9 +15,6 @@ const AccountUpgradePrompt = ({ isOpen, onClose, onUpgradeSuccess }) => {
   const { userData, setUserData, setIsGuestUser, setUserAuthenticated } = useAuth();
   const { icpUser } = useWebSocket();
 
-  // Debug logging
-  console.log('🔍 AccountUpgradePrompt props:', { isOpen, isUpgrading, step });
-
   const handleUpgradeWithII = async () => {
     try {
       setIsUpgrading(true);

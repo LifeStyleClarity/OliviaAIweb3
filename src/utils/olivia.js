@@ -28,6 +28,10 @@ export function getExtraData() {
   return extraDataRef;
 }
 
+export function clearExtraData() {
+  extraDataRef = null;
+}
+
 export function setWebsocketRunning(isRunning) {
   isWebsocketRunningRef = isRunning;
 }

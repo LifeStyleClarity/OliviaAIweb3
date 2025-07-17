@@ -7,7 +7,7 @@ import ChatInput from '../../ui/ChatInput';
 import ChatMessages from '../../ui/ChatMessages';
 import useAudioWebSocket from '../../../hooks/useAudioWebSocket';
 import { chatService } from '../../../api';
-import { getExtraData, setWebsocketRunning } from '../../../utils/olivia';
+import { getExtraData, setWebsocketRunning, clearExtraData } from '../../../utils/olivia';
 
 const OliviaChat = ({ onClose }) => {
   const [messages, setMessages] = useState([]);
@@ -15,6 +15,11 @@ const OliviaChat = ({ onClose }) => {
   const chatInputRef = useRef(null);
   const isProcessingRef = useRef(false);
   const { userData, isGuestUser } = useAuth();
+  
+  // Debug user state
+  useEffect(() => {
+    console.log('👤 User state in OliviaChat:', { userData, isGuestUser });
+  }, [userData, isGuestUser]);
   const { isConnected, isConnecting, sendMessage, currentAction, actionStatus, isStreamingResponse: wsIsStreamingResponse, cancelStreamingResponse, connect, disconnect, wsError, isServerUnavailable, currentEndpointIndex, wsEndpoints } = useWebSocket();
   
   // Import upgrade tracking hook
@@ -26,6 +31,36 @@ const OliviaChat = ({ onClose }) => {
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [imageEnabled, setImageEnabled] = useState(false);
   const [isWarmingUp, setIsWarmingUp] = useState(false);
+
+  // Expose sendChatMessage function to window for use by hooks
+  useEffect(() => {
+    console.log('🪟 Setting up window.sendChatMessage in OliviaChat');
+    
+    window.sendChatMessage = ({ message, action }) => {
+      console.log('🎬 window.sendChatMessage called with:', { message, action });
+      
+      const assistantMessage = {
+        id: uuidv4(),
+        text: message,
+        sender: 'assistant',
+        timestamp: new Date().toISOString(),
+        type: 'text',
+        action_type: action ? 'action' : null,
+        sub_action_type: action ? action.type : null,
+        meta: action ? action.meta : null,
+        isComplete: true,
+        typingComplete: true
+      };
+      
+      console.log('💬 Adding assistant message:', assistantMessage);
+      setMessages(prev => [...prev, assistantMessage]);
+    };
+    
+    return () => {
+      console.log('🧹 Cleaning up window.sendChatMessage');
+      delete window.sendChatMessage;
+    };
+  }, []);
 
   // Function to update chat history on the server
   const updateServerChatHistory = useCallback(async (updatedMessages) => {
@@ -380,24 +415,38 @@ const OliviaChat = ({ onClose }) => {
     };
   }, [disconnectAudio]);
 
-  // Handle extra data messages
+  // Handle extra data messages - simplified since ICP setup now uses dedicated route
   useEffect(() => {
     const extraData = getExtraData();
     if (extraData?.sendMessage) {
       const message = extraData.message;
+      console.log('🎯 Extra data message detected:', message);
+      
       if (isProcessingRef.current) {
         chatInputRef.current?.setMessage(message);
         chatInputRef.current?.focus();
       } else {
         handleSendMessage(message);
       }
+      
+      // Clear the extra data after using it to prevent repeated sends
+      setTimeout(() => {
+        clearExtraData();
+      }, 100);
     }
-  }, []);
+  }, [isConnected, messages.length]); // Run when connected or messages change
 
-  // Send initial message when connected
+  // Send initial message when connected (but skip if there's extra data waiting)
   useEffect(() => {
     const userId = userData?.user_id || 'guest_user';
     const hasHadInitialMessage = localStorage.getItem(`olivia_initial_sent_${userId}`);
+    const extraData = getExtraData();
+    
+    // Skip automatic crypto search if there's other extra data waiting
+    if (extraData?.sendMessage) {
+      console.log('🎯 Skipping automatic crypto search - extra data message takes priority');
+      return;
+    }
     
     if (isConnected && !isServerUnavailable && messages.length === 1 && messages[0]?.isStartup && !hasHadInitialMessage) {
       console.log('🔍 Connection established, sending initial message...');
