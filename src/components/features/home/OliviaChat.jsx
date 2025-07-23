@@ -439,7 +439,7 @@ const OliviaChat = ({ onClose }) => {
   // Send initial message when connected (but skip if there's extra data waiting)
   useEffect(() => {
     const userId = userData?.user_id || 'guest_user';
-    const hasHadInitialMessage = localStorage.getItem(`olivia_initial_sent_${userId}`);
+    const hasHadInitialMessage = localStorage.getItem(`olivia_initial_message_sent_${userId}`);
     const extraData = getExtraData();
     
     // Skip automatic crypto search if there's other extra data waiting
@@ -462,7 +462,7 @@ const OliviaChat = ({ onClose }) => {
       setMessages([greetingMessage]);
       updateServerChatHistory([greetingMessage]);
       
-      const hiddenSearchMessage = "search @https://crypto.news/ what's happening in crypto right now AND give me 4 key points";
+      const hiddenSearchMessage = "hey who are you and what day is it";
       
       const sendSearch = async () => {
         try {
@@ -473,7 +473,7 @@ const OliviaChat = ({ onClose }) => {
           
           const success = await sendMessage(hiddenSearchMessage, conversationHistory, true, false);
           if (success) {
-            localStorage.setItem(`olivia_initial_sent_${userId}`, 'true');
+            localStorage.setItem(`olivia_initial_message_sent_${userId}`, 'true');
           }
         } catch (error) {
           console.error('Failed to send search message:', error);

@@ -1,5 +1,6 @@
 // src/pages/Login.jsx
 import { useAuth } from '../contexts/AuthContext';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import Button from '../components/ui/Button';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -8,7 +9,8 @@ export default function Login() {
   const videoRef = useRef(null);
 
   // Authentication context
-  const { setUserAuthenticated, setUserData, loginAsGuest } = useAuth();
+  const { setUserAuthenticated, setUserData, loginAsGuest, setIsGuestUser } = useAuth();
+  const { login: internetIdentityLogin, principal, isLoading: iiLoading, isAuthenticated } = useInternetIdentity();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,6 +48,37 @@ export default function Login() {
     loginAsGuest();
     navigate('/home');
   };
+
+  // Handle Internet Identity login
+  const handleInternetIdentityLogin = async () => {
+    try {
+      const success = await internetIdentityLogin();
+      if (success) {
+        setIsGuestUser(false);
+        setUserAuthenticated(true);
+        navigate('/home');
+      }
+    } catch (error) {
+      console.error('Internet Identity login failed:', error);
+    }
+  };
+
+  // Auto-navigate if already authenticated with Internet Identity
+  useEffect(() => {
+    if (isAuthenticated && principal) {
+      setUserData({
+        user_id: principal,
+        first_name: 'User',
+        last_name: '',
+        email: '',
+        auth_method: 'internet_identity',
+        is_guest: false
+      });
+      setIsGuestUser(false);
+      setUserAuthenticated(true);
+      navigate('/home');
+    }
+  }, [isAuthenticated, principal, setUserData, setIsGuestUser, setUserAuthenticated, navigate]);
 
   return (
     <>
@@ -85,10 +118,19 @@ export default function Login() {
             Enabling dApps, wallets, and bots to launch real-time, intelligent agents in seconds. Every interaction is measurable, monetizable, and on-chain.
           </p>
           <div className="w-full flex flex-col items-center justify-center gap-4">
+            {/* Internet Identity Button */}
+            <Button
+              onPress={handleInternetIdentityLogin}
+              className="w-full max-w-[300px] h-[48px] bg-[#31F46E] hover:bg-[#28d15a] text-black font-medium text-sm rounded-lg flex items-center justify-center"
+              isDisabled={iiLoading}
+            >
+              {iiLoading ? 'Connecting...' : 'Login with Internet Identity'}
+            </Button>
+            
             {/* Guest Button */}
             <Button
               onPress={handleGuestLogin}
-              className="w-full max-w-[300px] h-[48px] bg-[#31F46E] hover:bg-[#28d15a] text-black font-medium text-sm rounded-lg flex items-center justify-center"
+              className="w-full max-w-[300px] h-[48px] bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 font-medium text-sm rounded-lg flex items-center justify-center"
             >
               Continue as Guest
             </Button>

@@ -67,17 +67,36 @@ const idlFactory = ({ IDL }) => {
 let agent = null;
 let actor = null;
 
-const createAgent = async () => {
-  if (!agent) {
+const createAgent = async (identity = null) => {
+  // Always create a new agent if we have a specific identity
+  if (identity || !agent) {
     try {
-      agent = new HttpAgent({ host: HOST });
+      const agentOptions = { host: HOST };
+      
+      // Use provided identity if available (Internet Identity)
+      if (identity) {
+        agentOptions.identity = identity;
+        console.log('🟦 Creating ICP Agent with Internet Identity');
+      } else {
+        console.log('🟦 Creating ICP Agent with anonymous identity');
+      }
+      
+      const newAgent = new HttpAgent(agentOptions);
       
       // In development, fetch the root key
       if (import.meta.env.DEV) {
-        await agent.fetchRootKey();
+        await newAgent.fetchRootKey();
+      }
+      
+      // Update the global agent reference
+      if (identity) {
+        agent = newAgent; // Store authenticated agent
+      } else if (!agent) {
+        agent = newAgent; // Store anonymous agent only if none exists
       }
       
       console.log('🟦 ICP Agent created successfully');
+      return newAgent;
     } catch (error) {
       if (import.meta.env.DEV) {
         console.warn('🟦 ICP agent connection failed (development mode):', error.message);
@@ -90,22 +109,41 @@ const createAgent = async () => {
   return agent;
 };
 
-const createActor = async () => {
-  if (!actor) {
-    const agentInstance = await createAgent();
-    actor = Actor.createActor(idlFactory, {
+const createActor = async (identity = null) => {
+  // Always create a new actor if we have a specific identity
+  if (identity || !actor) {
+    const agentInstance = await createAgent(identity);
+    const newActor = Actor.createActor(idlFactory, {
       agent: agentInstance,
       canisterId: CANISTER_ID,
     });
+    
+    // Update global actor reference
+    if (identity) {
+      actor = newActor; // Store authenticated actor
+    } else if (!actor) {
+      actor = newActor; // Store anonymous actor only if none exists
+    }
+    
+    return newActor;
   }
   return actor;
 };
 
 export const icpService = {
+  // Set Internet Identity for authenticated operations
+  setIdentity(identity) {
+    // Reset agent and actor to force recreation with new identity
+    agent = null;
+    actor = null;
+    this._currentIdentity = identity;
+    console.log('🟦 Internet Identity set for ICP service');
+  },
+
   // Test connection
   async testConnection() {
     try {
-      const actorInstance = await createActor();
+      const actorInstance = await createActor(this._currentIdentity);
       const result = await actorInstance.greet('Frontend');
       return { success: true, message: result };
     } catch (error) {
@@ -121,7 +159,7 @@ export const icpService = {
   // User management
   async createUser(firstName, lastName, email, telegramId = null, walletAddress = null) {
     try {
-      const actorInstance = await createActor();
+      const actorInstance = await createActor(this._currentIdentity);
       const result = await actorInstance.createUser(firstName, lastName, email, telegramId ? [telegramId] : [], walletAddress ? [walletAddress] : []);
       
       if ('ok' in result) {
@@ -137,7 +175,7 @@ export const icpService = {
 
   async createGuestUser() {
     try {
-      const actorInstance = await createActor();
+      const actorInstance = await createActor(this._currentIdentity);
       const result = await actorInstance.createGuestUser();
       
       if ('ok' in result) {
@@ -153,7 +191,7 @@ export const icpService = {
 
   async getUser() {
     try {
-      const actorInstance = await createActor();
+      const actorInstance = await createActor(this._currentIdentity);
       const result = await actorInstance.getUser();
       
       if ('ok' in result) {

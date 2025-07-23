@@ -491,13 +491,13 @@ const ChatModal = () => {
   useEffect(() => {
     // Use 'guest_user' as fallback if userData is not loaded yet
     const userId = userData?.user_id || 'guest_user';
-    const hasHadInitialCryptoNews = localStorage.getItem(`olivia_crypto_news_sent_${userId}`);
+    const hasHadInitialMessage = localStorage.getItem(`olivia_initial_message_sent_${userId}`);
     
     // FOR TESTING: Reset the first message flag - uncomment this line to reset
-    // localStorage.removeItem(`olivia_crypto_news_sent_${userId}`);
+    localStorage.removeItem(`olivia_initial_message_sent_${userId}`);
     
     // Only proceed if we have the startup message and haven't sent initial message
-    if (isOpen && messages.length === 1 && messages[0]?.isStartup && !hasHadInitialCryptoNews && !isProcessingRef.current) {
+    if (isOpen && messages.length === 1 && messages[0]?.isStartup && !hasHadInitialMessage && !isProcessingRef.current) {
       console.log('✅ Replacing startup message with greeting');
       
       let greetingMessage;
@@ -547,15 +547,15 @@ const ChatModal = () => {
   // Send search message when connection is established and we have the greeting message
   useEffect(() => {
     const userId = userData?.user_id || 'guest_user';
-    const hasHadInitialCryptoNews = localStorage.getItem(`olivia_crypto_news_sent_${userId}`);
+    const hasHadInitialMessage = localStorage.getItem(`olivia_initial_message_sent_${userId}`);
     
-    if (isOpen && isConnected && !isServerUnavailable && messages.length === 1 && !hasHadInitialCryptoNews) {
+    if (isOpen && isConnected && !isServerUnavailable && messages.length === 1 && !hasHadInitialMessage) {
       const greetingMessage = messages[0];
       
       if (greetingMessage.sender === 'assistant') {
         console.log('🔍 Connection established, sending search message...');
         
-        const hiddenSearchMessage = "search @https://crypto.news/ what's happening in crypto right now AND give me 4 key points";
+        const hiddenSearchMessage = "hey who are you and what day is it";
         
         const sendSearch = async () => {
           try {
@@ -572,14 +572,14 @@ const ChatModal = () => {
              
              if (success) {
                console.log('✅ Search message sent successfully');
-               // Mark that crypto news has been sent for this user
-               localStorage.setItem(`olivia_crypto_news_sent_${userData?.user_id || 'guest'}`, 'true');
+               // Mark that initial message has been sent for this user
+               localStorage.setItem(`olivia_initial_message_sent_${userData?.user_id || 'guest'}`, 'true');
              } else {
                console.log('⚠️ First attempt failed, retrying in 1000ms...');
                await new Promise(resolve => setTimeout(resolve, 1000));
                const retrySuccess = await sendMessage(hiddenSearchMessage, conversationHistory, true, false);
                if (retrySuccess) {
-                 localStorage.setItem(`olivia_crypto_news_sent_${userData?.user_id || 'guest'}`, 'true');
+                 localStorage.setItem(`olivia_initial_message_sent_${userData?.user_id || 'guest'}`, 'true');
                }
              }
       } catch (error) {

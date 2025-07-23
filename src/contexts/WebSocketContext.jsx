@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useRef, useCallback, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import icpService from '../api/services/icp.service';
 
 const WebSocketContext = createContext();
@@ -39,6 +40,7 @@ export const WebSocketProvider = ({ children }) => {
   const [conversationId, setConversationId] = useState(null);
   
   const { userData, userAuthenticated, isGuestUser } = useAuth();
+  const { identity, isAuthenticated } = useInternetIdentity();
 
   // Constants
   const AGENT_ID = 'e66ea468-98a4-40a9-a9fd-803a39574e0e';
@@ -47,13 +49,7 @@ export const WebSocketProvider = ({ children }) => {
   // WebSocket endpoints to try (in order of preference)
   const wsBase = import.meta.env.VITE_WEBSOCKET_URL || 'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app';
   const WS_ENDPOINTS = [
-    `${wsBase}/ws/agent/stream`,
-    `${wsBase}/ws/agent/${AGENT_ID}`,
-    `${wsBase}/ws/agents/${AGENT_ID}`,
-    `${wsBase}/ws/chat/agents`,
-    `${wsBase}/ws/chat`,
-    `${wsBase}/ws/stream`,
-    `${wsBase}/ws`
+    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app/ws/agent/stream' // EXACT WebSocket endpoint for Olivia AI
   ];
   
   const [currentEndpointIndex, setCurrentEndpointIndex] = useState(0);
@@ -96,9 +92,14 @@ export const WebSocketProvider = ({ children }) => {
       let user = await icpService.getUser();
       
       if (!user.success) {
-        console.log('🟦 Creating new ICP user...');
+        console.log('🟦 Creating new ICP user...', {
+          hasUserData: !!userData,
+          isGuestUser: isGuestUser,
+          userData: userData
+        });
         // Create new user based on auth data
         if (userData && !isGuestUser) {
+          console.log('🟦 Creating REGULAR user because userData exists and not guest mode');
           const [firstName = '', ...lastNameParts] = (userData.contact_name || '').split(' ');
           const lastName = lastNameParts.join(' ');
           
@@ -110,7 +111,10 @@ export const WebSocketProvider = ({ children }) => {
             userData.crypto_wallet_address || null
           );
         } else {
-          console.log('🟦 Creating guest user...');
+          console.log('🟦 Creating GUEST user because no userData or in guest mode', {
+            hasUserData: !!userData,
+            isGuestUser: isGuestUser
+          });
           // Create guest user
           user = await icpService.createGuestUser();
         }
@@ -364,7 +368,7 @@ export const WebSocketProvider = ({ children }) => {
     setWsError(null);
 
     const wsUrl = WS_ENDPOINTS[currentEndpointIndex];
-    console.log('🔌 Connecting to WebSocket:', wsUrl, '(endpoint:', currentEndpointIndex + 1, '/', WS_ENDPOINTS.length, 'attempt:', connectionAttempts + 1, ')');
+    console.log('🔌 Connecting to Olivia AI WebSocket:', wsUrl, '(attempt:', connectionAttempts + 1, ')');
     
     wsRef.current = new WebSocket(wsUrl);
 
@@ -436,7 +440,13 @@ export const WebSocketProvider = ({ children }) => {
     };
 
     wsRef.current.onerror = (error) => {
-      console.log('WebSocket connection error - this is normal during development');
+      console.error('🚨 Olivia AI WebSocket Error:', {
+        url: wsUrl,
+        error: error,
+        readyState: wsRef.current?.readyState,
+        attempt: connectionAttempts + 1,
+        message: 'Failed to connect to Olivia AI service'
+      });
       setWsError(error);
       setIsConnected(false);
       setIsConnecting(false);

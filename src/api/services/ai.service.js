@@ -12,13 +12,7 @@ class AiService {
         // Try different WebSocket endpoints based on the API structure
         // Start with the known working endpoint first
         this.WS_ENDPOINTS = [
-            `${wsBase}/ws/agent/stream`, // Known working endpoint - prioritize this
-            `${wsBase}/ws/agent/${this.AGENT_ID}`, // Agent-specific endpoint
-            `${wsBase}/ws/agents/${this.AGENT_ID}`, // Alternative agent endpoint
-            `${wsBase}/ws/chat/agents`,  // General agent chat endpoint
-            `${wsBase}/ws/chat`, // General chat endpoint
-            `${wsBase}/ws/stream`, // Stream endpoint
-            `${wsBase}/ws` // Basic WebSocket endpoint
+            'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app/ws/agent/stream' // EXACT WebSocket endpoint for Olivia AI
         ];
         
         this.WS_URL = this.WS_ENDPOINTS[0]; // Start with the first endpoint (working one)

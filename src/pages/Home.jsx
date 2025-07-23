@@ -206,7 +206,7 @@ export default function Home() {
         
         // Send a simple message to get response
         setTimeout(() => {
-          sendMessage('Do a web search for trending tokens and the latest crypto news. Present it as if you\'re giving me the inside scoop on what\'s happening today in the market. Speak like you\'re already deep in the charts — confident, sharp, and human. No intros, no greetings. Just drop straight into what you\'re seeing and what I should be watching.')
+          sendMessage('hey who are you and what day is it')
         }, 1000)
       } else {
         setIsChatOpen(false)
