@@ -279,19 +279,11 @@ export default function Home() {
             {/* Current Response or Loading */}
             {isLoading ? (
               <div className="flex flex-col items-center gap-3">
-                <div className="flex items-center gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-1 bg-white/60 rounded-full animate-pulse"
-                      style={{
-                        height: '20px',
-                        animationDelay: `${i * 0.2}s`,
-                        animationDuration: '1s'
-                      }}
-                    />
-                  ))}
-                </div>
+                <img 
+                  src="/THINKING ICON.gif" 
+                  alt="Thinking" 
+                  className="w-12 h-12"
+                />
                 <div className="text-white/80 text-sm">
                   {loadingText}...
                 </div>

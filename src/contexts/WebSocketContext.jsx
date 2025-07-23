@@ -45,7 +45,7 @@ export const WebSocketProvider = ({ children }) => {
   const MODEL_NAME = 'gpt-4.1';
   
   // WebSocket endpoints to try (in order of preference)
-  const wsBase = import.meta.env.VITE_WEBSOCKET_URL || 'wss://agents-micro-service-yr8zx.ondigitalocean.app';
+  const wsBase = import.meta.env.VITE_WEBSOCKET_URL || 'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app';
   const WS_ENDPOINTS = [
     `${wsBase}/ws/agent/stream`,
     `${wsBase}/ws/agent/${AGENT_ID}`,
@@ -81,8 +81,13 @@ export const WebSocketProvider = ({ children }) => {
       // Test ICP connection first
       const connectionTest = await icpService.testConnection();
       if (!connectionTest.success) {
-        console.error('🟦 ICP connection failed:', connectionTest.error);
-        return;
+        if (import.meta.env.DEV) {
+          console.warn('🟦 ICP connection failed (development mode - this is normal if local ICP network is not running)');
+          return;
+        } else {
+          console.error('🟦 ICP connection failed:', connectionTest.error);
+          return;
+        }
       }
       
       console.log('🟦 ICP connection test successful:', connectionTest.message);
@@ -392,12 +397,19 @@ export const WebSocketProvider = ({ children }) => {
       // Only attempt to reconnect if it was an unexpected close (not manual)
       // and we haven't reached max attempts AND reconnection is enabled
       if (event.code !== 1000 && shouldReconnect) {
-        if (connectionAttempts < MAX_RETRIES) {
-          console.log('Attempting to reconnect... Attempt', connectionAttempts + 1);
+        // In development, be less aggressive with reconnection attempts
+        const maxAttemptsForEnv = import.meta.env.DEV ? 3 : MAX_RETRIES;
+        
+        if (connectionAttempts < maxAttemptsForEnv) {
+          if (import.meta.env.DEV) {
+            console.warn('WebSocket reconnecting... Attempt', connectionAttempts + 1, '(development mode)');
+          } else {
+            console.log('Attempting to reconnect... Attempt', connectionAttempts + 1);
+          }
           reconnectTimeoutRef.current = setTimeout(() => {
             setConnectionAttempts(prev => prev + 1);
             connectWebSocket();
-          }, Math.pow(2, connectionAttempts) * 1000); // Exponential backoff
+          }, Math.pow(2, connectionAttempts) * 2000); // Slower reconnection in dev
         } else {
           // Try next endpoint if available
           if (currentEndpointIndex < WS_ENDPOINTS.length - 1) {
@@ -406,15 +418,16 @@ export const WebSocketProvider = ({ children }) => {
             setConnectionAttempts(0); // Reset attempts for new endpoint
             reconnectTimeoutRef.current = setTimeout(() => {
               connectWebSocket();
-            }, 1000);
+            }, 2000);
           } else {
-            console.log('🚫 All endpoints exhausted, marking server as unavailable');
-            setIsServerUnavailable(true);
-            setWsError('Chat service is currently unavailable');
-            // Only show toast in production
-            if (process.env.NODE_ENV === 'production') {
+            if (import.meta.env.DEV) {
+              console.warn('🚫 WebSocket service unavailable (development mode - this is normal)');
+            } else {
+              console.log('🚫 All endpoints exhausted, marking server as unavailable');
               toast.error('Chat service is currently unavailable');
             }
+            setIsServerUnavailable(true);
+            setWsError('Chat service is currently unavailable');
           }
         }
       } else if (!shouldReconnect) {

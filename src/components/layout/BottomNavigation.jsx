@@ -36,7 +36,7 @@ export default function BottomNavigation() {
         <div className="absolute left-1/2 -translate-x-1/2 -top-10 bg-[#0a0a0a] rounded-full border border-white/10 z-50">
           <Button
             variant="ghost"
-            className="w-20 h-20 min-w-20 p-0 flex flex-col items-center bg-[#0a0a0a] rounded-full animate-pulse hover:animate-none"
+            className="w-20 h-20 min-w-20 p-0 flex flex-col items-center bg-[#0a0a0a] rounded-full olivia-pulse hover:animate-none"
             onPress={() => startOliviaChat({
               action: "quick_chat",
               message: "",
@@ -61,24 +61,7 @@ export default function BottomNavigation() {
           </div>
         </nav>
       </div>
-      
-      {/* Additional CSS for enhanced pulse effect */}
-      <style jsx>{`
-        .animate-pulse {
-          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.8;
-            transform: scale(1.05);
-          }
-        }
-      `}</style>
+
     </>
   );
 }

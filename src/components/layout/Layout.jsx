@@ -34,7 +34,10 @@ export default function Layout() {
   useEffect(() => {
     if (import.meta.env.DEV) {
       window.forceUpgradePrompt = forceShowUpgrade;
-      console.log('🧪 Dev helper: Use window.forceUpgradePrompt() to test upgrade flow');
+      if (!window._devHelpersLogged) {
+        console.log('🧪 Dev helper: Use window.forceUpgradePrompt() to test upgrade flow');
+        window._devHelpersLogged = true;
+      }
     }
   }, [forceShowUpgrade]);
 

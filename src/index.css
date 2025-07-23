@@ -477,6 +477,22 @@ button.go3974562317[data-tc-dropdown-button]>.go1140934594 {
   100% { left: 100%; }
 }
 
+/* Enhanced pulse animation for Olivia AI button */
+@keyframes olivia-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.olivia-pulse {
+  animation: olivia-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 .jarvis-hologram {
   position: relative;
   animation: jarvis-hologram-flicker 3s ease-in-out infinite;

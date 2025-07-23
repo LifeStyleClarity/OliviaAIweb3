@@ -7,7 +7,7 @@ class AiService {
         this.AGENT_ID = 'e66ea468-98a4-40a9-a9fd-803a39574e0e';
         this.MODEL_NAME = 'gpt-4.1';
         // Use environment variable for WebSocket URL, fallback to hardcoded for now
-        const wsBase = import.meta.env.VITE_WEBSOCKET_URL || 'wss://agents-micro-service-yr8zx.ondigitalocean.app';
+        const wsBase = import.meta.env.VITE_WEBSOCKET_URL || 'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app';
         
         // Try different WebSocket endpoints based on the API structure
         // Start with the known working endpoint first

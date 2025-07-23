@@ -79,7 +79,11 @@ const createAgent = async () => {
       
       console.log('🟦 ICP Agent created successfully');
     } catch (error) {
-      console.error('🟦 Failed to create ICP agent:', error);
+      if (import.meta.env.DEV) {
+        console.warn('🟦 ICP agent connection failed (development mode):', error.message);
+      } else {
+        console.error('🟦 Failed to create ICP agent:', error);
+      }
       throw error;
     }
   }
@@ -105,7 +109,11 @@ export const icpService = {
       const result = await actorInstance.greet('Frontend');
       return { success: true, message: result };
     } catch (error) {
-      console.error('ICP connection test failed:', error);
+      if (import.meta.env.DEV) {
+        console.warn('🟦 ICP connection test failed (development mode):', error.message);
+      } else {
+        console.error('ICP connection test failed:', error);
+      }
       return { success: false, error: error.message };
     }
   },

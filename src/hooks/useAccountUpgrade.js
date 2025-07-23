@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import icpService from '../api/services/icp.service';
@@ -23,10 +23,13 @@ export const useAccountUpgrade = () => {
   const [messageCount, setMessageCount] = useState(0);
   const [canUpgrade, setCanUpgrade] = useState(false);
   const [isCheckingUpgrade, setIsCheckingUpgrade] = useState(false);
+  const sessionRef = useRef({ initialized: false });
 
   // Initialize session tracking
   useEffect(() => {
-    console.log('🔄 Initialize session tracking:', { isGuestUser });
+    if (import.meta.env.DEV && !sessionRef.current.initialized) {
+      console.log('🔄 Initialize session tracking:', { isGuestUser });
+    }
     
     if (isGuestUser) {
       // Track session start time
@@ -35,12 +38,15 @@ export const useAccountUpgrade = () => {
       const wasDismissed = localStorage.getItem(STORAGE_KEYS.UPGRADE_DISMISSED);
       const lastShown = localStorage.getItem(STORAGE_KEYS.UPGRADE_LAST_SHOWN);
       
-      console.log('💾 localStorage state:', {
-        sessionStart,
-        savedCount,
-        wasDismissed,
-        lastShown
-      });
+      if (import.meta.env.DEV && !sessionRef.current.initialized) {
+        console.log('💾 localStorage state:', {
+          sessionStart,
+          savedCount,
+          wasDismissed,
+          lastShown
+        });
+        sessionRef.current.initialized = true;
+      }
       
       if (!sessionStart) {
         localStorage.setItem(STORAGE_KEYS.SESSION_START, Date.now().toString());

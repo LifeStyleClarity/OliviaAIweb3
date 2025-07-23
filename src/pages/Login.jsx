@@ -1,34 +1,15 @@
 // src/pages/Login.jsx
-import { useTonConnectAuth, useTelegramAuth } from '../auth';
-import { Spinner } from '@heroui/react';
-import { TonConnectButton } from '@tonconnect/ui-react';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
-import { WalletAuthModal } from '../components/WalletAuthModal';
-import { useWalletAuthFlow } from '../hooks/useWalletAuthFlow';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
-  // Auth hooks for wallet and Telegram
-  const { loading: tonLoading, error: tonError, wallet } = useTonConnectAuth();
-  const { loading: telegramLoading, handleTelegramAuth, error: telegramError } = useTelegramAuth();
-  const loading = tonLoading || telegramLoading;
   const videoRef = useRef(null);
 
-  // Authentication context (if needed)
+  // Authentication context
   const { setUserAuthenticated, setUserData, loginAsGuest } = useAuth();
   const navigate = useNavigate();
-
-  // Use our custom hook for shared wallet auth logic
-  const {
-    isModalOpen,
-    modalUsers,
-    isAggregating,
-    modalMessages,
-    handleAggregateAccounts,
-    handleCancelAggregate,
-  } = useWalletAuthFlow();
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -68,16 +49,6 @@ export default function Login() {
 
   return (
     <>
-      {/* Render the shared modal if needed */}
-      <WalletAuthModal
-        isOpen={isModalOpen}
-        modalUsers={modalUsers}
-        modalMessages={modalMessages}
-        handleAggregateAccounts={handleAggregateAccounts}
-        handleCancelAggregate={handleCancelAggregate}
-        wallet={wallet}
-      />
-
       <div className="min-h-screen flex items-center relative justify-center px-4 safe-area-view">
         {/* Background Video */}
         <video
@@ -113,48 +84,16 @@ export default function Login() {
           <p className="text-[#cccccc] text-[18px] text-center mb-12 max-w-[500px]">
             Enabling dApps, wallets, and bots to launch real-time, intelligent agents in seconds. Every interaction is measurable, monetizable, and on-chain.
           </p>
-          <div className="w-full flex flex-row items-center justify-center gap-3">
-            {/* TON Connect Button */}
-            <Button
-              onPress={() => {
-                // Get the TON Connect button element and click it
-                const tonConnectBtn = document.querySelector('ton-connect-button');
-                if (tonConnectBtn) {
-                  tonConnectBtn.click();
-                }
-              }}
-              className="flex-1 min-w-[160px] max-w-[180px] h-[48px] bg-[#0098EA] hover:bg-[#007ACC] text-white font-medium text-sm rounded-lg flex items-center justify-center"
-              isDisabled={loading}
-            >
-              Connect Wallet
-            </Button>
-
-            {/* Telegram Button */}
-            <Button
-              onPress={() => {
-                //console.log('📱 Telegram auth button clicked');
-                handleTelegramAuth();
-              }}
-              className="flex-1 min-w-[160px] max-w-[180px] h-[48px] bg-[#31F46E] hover:bg-[#28d15a] text-black font-medium text-sm rounded-lg flex items-center justify-center"
-              isDisabled={loading}
-            >
-              Continue with Telegram
-            </Button>
-
+          <div className="w-full flex flex-col items-center justify-center gap-4">
             {/* Guest Button */}
             <Button
               onPress={handleGuestLogin}
-              className="flex-1 min-w-[160px] max-w-[180px] h-[48px] bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 font-medium text-sm rounded-lg flex items-center justify-center"
-              isDisabled={loading}
+              className="w-full max-w-[300px] h-[48px] bg-[#31F46E] hover:bg-[#28d15a] text-black font-medium text-sm rounded-lg flex items-center justify-center"
             >
               Continue as Guest
             </Button>
           </div>
-          
-          {/* Hidden TON Connect Button for functionality */}
-          <div className="hidden">
-            <TonConnectButton />
-          </div>
+
         </div>
       </div>
     </>

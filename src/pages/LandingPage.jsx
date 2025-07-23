@@ -56,17 +56,17 @@ export default function LandingPage() {
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
           <Button
-            size="lg"
-            className="bg-[#31F46E] hover:bg-[#28d15a] text-black font-bold px-8 py-4 md:px-12 md:py-6 text-lg md:text-xl rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+            size="md"
+            className="bg-[#31F46E] hover:bg-[#28d15a] text-black font-bold px-6 py-3 md:px-8 md:py-4 text-base md:text-lg rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
             onPress={handleGetStarted}
           >
             Get Started
           </Button>
           
           <Button
-            size="lg"
+            size="md"
             variant="bordered"
-            className="border-2 border-white text-white hover:bg-white hover:text-black font-bold px-8 py-4 md:px-12 md:py-6 text-lg md:text-xl rounded-full transition-all duration-300 transform hover:scale-105"
+            className="border-2 border-white text-white hover:bg-white hover:text-black font-bold px-6 py-3 md:px-8 md:py-4 text-base md:text-lg rounded-full transition-all duration-300 transform hover:scale-105"
             onPress={handleLearnMore}
           >
             Learn More

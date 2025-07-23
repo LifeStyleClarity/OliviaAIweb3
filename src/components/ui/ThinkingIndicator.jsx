@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Brain, Search, Sparkles, Zap } from 'lucide-react';
 import PropTypes from 'prop-types';
 
 const ThinkingIndicator = ({ 
@@ -142,10 +141,13 @@ const ThinkingIndicator = ({
       
       <div className="bg-gradient-to-r from-gray-800/50 to-gray-700/50 backdrop-blur-sm border border-gray-600/30 rounded-2xl px-4 py-3">
         <div className="flex items-center gap-3">
-          {/* Animated icon */}
+          {/* Thinking GIF icon - very small */}
           <div className="relative">
-            {config.icon}
-            <div className="absolute -inset-1 bg-current rounded-full opacity-20 animate-ping"></div>
+            <img 
+              src="/THINKING ICON.gif" 
+              alt="Thinking" 
+              className="w-6 h-6"
+            />
           </div>
           
           {/* Message text */}
