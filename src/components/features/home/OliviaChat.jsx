@@ -607,7 +607,7 @@ const OliviaChat = ({ onClose }) => {
       </div>
 
       {/* Messages */}
-      <div className="h-96 overflow-y-auto p-4">
+      <div className="h-96 overflow-hidden p-4">
         <ChatMessages
           messages={messages}
           isBotResponding={wsIsStreamingResponse || isStreamingResponse}

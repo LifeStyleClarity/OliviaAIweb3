@@ -176,15 +176,21 @@ const WelcomeDrawer = ({ isOpen, onClose }) => {
           </div>
         </DrawerHeader>
         <DrawerBody className="bg-[#0A0A0A]">
-          <div className="flex flex-col gap-4 p-4 overflow-y-auto max-h-[calc(100vh-120px)]">
+          <div className="flex flex-col gap-4 p-4 overflow-hidden max-h-[calc(100vh-120px)]">
             {messages.map((msg, index) => {
               // Check if this is the first bot message or if it follows a user message
               const isPreviousMessageFromUser = index > 0 && messages[index - 1].type === "user";
               const isFirstMessage = index === 0;
               const shouldShowOliviaLabel = msg.type === "bot" && (isFirstMessage || isPreviousMessageFromUser);
+              
+              // Calculate fade: newest messages (highest index) = 100% opacity
+              // Older messages (lower index) = fade out towards top
+              const totalMessages = messages.length;
+              const messageAge = totalMessages - index - 1; // 0 = newest, higher = older
+              const fadeOpacity = Math.max(0.2, 1 - (messageAge * 0.15));
 
               return (
-                <div key={index}>
+                <div key={index} style={{ opacity: fadeOpacity }}>
                   {shouldShowOliviaLabel && (
                     <p className="flex justify-start text-white items-center gap-1 text-[12px] text-opacity-80">
                       <img

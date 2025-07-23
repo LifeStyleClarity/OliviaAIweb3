@@ -37,8 +37,15 @@ const ChatMessages = ({
   
   return (
     <div className="flex  flex-col gap-4 h-full">
-      {messages.map((msg, index) => (
-        <div key={index}>
+      {messages.map((msg, index) => {
+        // Calculate fade: newest messages (highest index) = 100% opacity
+        // Older messages (lower index) = fade out towards top
+        const totalMessages = messages.length;
+        const messageAge = totalMessages - index - 1; // 0 = newest, higher = older
+        const fadeOpacity = Math.max(0.2, 1 - (messageAge * 0.15));
+        
+        return (
+        <div key={index} style={{ opacity: fadeOpacity }}>
           {msg.sender === "user" ? null : (
             <p className="flex justify-start items-center gap-1 text-[12px] text-opacity-80">
               <img
@@ -238,7 +245,8 @@ const ChatMessages = ({
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
       {/* Enhanced thinking indicator - shows real processing state */}
       {/* Show thinking indicator immediately when chat opens, even with no messages */}
       {(isBotResponding || isStreamingResponse || isWarmingUp) && (

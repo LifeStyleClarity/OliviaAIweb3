@@ -257,23 +257,30 @@ export default function Home() {
           <div className="text-center max-w-xl w-full">
             
             {/* Chat Messages */}
-            <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
-              {messages.map((msg, index) => (
-                <div 
-                  key={index}
-                  className={`text-sm transition-all duration-500 ${
-                    msg.type === 'user' 
-                      ? 'text-green-300 opacity-70' 
-                      : 'text-white opacity-90'
-                  }`}
-                  style={{
-                    transform: `translateY(${-index * 2}px)`,
-                    opacity: Math.max(0.3, 1 - (index * 0.1))
-                  }}
-                >
-                  {msg.content}
-                </div>
-              ))}
+            <div className="space-y-3 mb-6 max-h-96 overflow-hidden">
+              {messages.map((msg, index) => {
+                // Calculate fade: newest messages (highest index) = 100% opacity
+                // Older messages (lower index) = fade out towards top
+                const totalMessages = messages.length;
+                const messageAge = totalMessages - index - 1; // 0 = newest, higher = older
+                const fadeOpacity = Math.max(0.2, 1 - (messageAge * 0.15));
+                
+                return (
+                  <div 
+                    key={index}
+                    className={`text-sm transition-all duration-500 ${
+                      msg.type === 'user' 
+                        ? 'text-green-300' 
+                        : 'text-white'
+                    }`}
+                    style={{
+                      opacity: fadeOpacity
+                    }}
+                  >
+                    {msg.content}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Current Response or Loading */}
