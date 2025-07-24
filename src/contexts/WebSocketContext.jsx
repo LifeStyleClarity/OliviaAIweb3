@@ -14,7 +14,9 @@ export const useWebSocket = () => {
   return context;
 };
 
-const MAX_RETRIES = 4;
+const MAX_RETRIES = 10; // Increased for persistence
+const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+const CONNECTION_TIMEOUT = 60000; // 60 seconds
 
 export const WebSocketProvider = ({ children }) => {
   const wsRef = useRef(null);
@@ -22,6 +24,9 @@ export const WebSocketProvider = ({ children }) => {
   const requestIdRef = useRef(0);
   const pendingRequestsRef = useRef(new Map());
   const reconnectTimeoutRef = useRef(null);
+  const heartbeatIntervalRef = useRef(null);
+  const connectionTimeoutRef = useRef(null);
+  const lastPongRef = useRef(null);
   const pendingMessagesRef = useRef(new Map()); // Use ref instead of state
   
   const [isConnected, setIsConnected] = useState(false);
@@ -33,6 +38,7 @@ export const WebSocketProvider = ({ children }) => {
   const [isStreamingResponse, setIsStreamingResponse] = useState(false);
   const [shouldReconnect, setShouldReconnect] = useState(false);
   const [isServerUnavailable, setIsServerUnavailable] = useState(false);
+  const [isMounted, setIsMounted] = useState(true);
   
   // ICP Storage related state
   const [icpInitialized, setIcpInitialized] = useState(false);
@@ -53,6 +59,61 @@ export const WebSocketProvider = ({ children }) => {
   ];
   
   const [currentEndpointIndex, setCurrentEndpointIndex] = useState(0);
+
+  // Clear all timers
+  const clearAllTimers = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+      connectionTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Start heartbeat/ping mechanism
+  const startHeartbeat = useCallback(() => {
+    console.log('💓 Starting WebSocket heartbeat mechanism');
+    
+    clearInterval(heartbeatIntervalRef.current);
+    lastPongRef.current = Date.now();
+    
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        const now = Date.now();
+        
+        // Check if we missed a pong (connection might be dead)
+        if (lastPongRef.current && (now - lastPongRef.current) > (HEARTBEAT_INTERVAL * 2)) {
+          console.warn('💓 Heartbeat timeout detected, reconnecting...');
+          wsRef.current.close(1000, 'Heartbeat timeout');
+          return;
+        }
+        
+        // Send ping
+        try {
+          wsRef.current.send(JSON.stringify({ type: 'ping', timestamp: now }));
+          console.log('💓 Ping sent');
+        } catch (error) {
+          console.error('💓 Failed to send ping:', error);
+          wsRef.current.close(1000, 'Ping failed');
+        }
+      }
+    }, HEARTBEAT_INTERVAL);
+  }, []);
+
+  // Stop heartbeat
+  const stopHeartbeat = useCallback(() => {
+    console.log('💓 Stopping WebSocket heartbeat');
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  }, []);
 
   // Generate request ID
   const generateRequestId = () => {
@@ -257,6 +318,11 @@ export const WebSocketProvider = ({ children }) => {
   const handleWebSocketMessage = useCallback((data) => {
     // Handle different message types
     switch (data.type) {
+      case 'pong':
+        // Handle pong response from server
+        lastPongRef.current = Date.now();
+        console.log('💓 Pong received, connection healthy');
+        break;
       case 'stream_chunk':
         setIsStreamingResponse(true);
         break;
@@ -346,9 +412,9 @@ export const WebSocketProvider = ({ children }) => {
       return;
     }
 
-    // Don't attempt connection if server is marked as unavailable
-    if (isServerUnavailable) {
-      console.log('⚠️ Server marked as unavailable, skipping connection attempt');
+    // Only skip if component is unmounted
+    if (!isMounted) {
+      console.log('⚠️ Component unmounted, skipping connection attempt');
       return;
     }
 
@@ -358,11 +424,8 @@ export const WebSocketProvider = ({ children }) => {
       wsRef.current = null;
     }
 
-    // Clear any pending reconnection timeouts
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
+    // Clear all timers
+    clearAllTimers();
 
     setIsConnecting(true);
     setWsError(null);
@@ -370,16 +433,34 @@ export const WebSocketProvider = ({ children }) => {
     const wsUrl = WS_ENDPOINTS[currentEndpointIndex];
     console.log('🔌 Connecting to Olivia AI WebSocket:', wsUrl, '(attempt:', connectionAttempts + 1, ')');
     
+    // Set connection timeout
+    connectionTimeoutRef.current = setTimeout(() => {
+      if (wsRef.current && wsRef.current.readyState !== WebSocket.OPEN) {
+        console.warn('🔌 Connection timeout, closing WebSocket');
+        wsRef.current.close();
+      }
+    }, CONNECTION_TIMEOUT);
+    
     wsRef.current = new WebSocket(wsUrl);
 
     wsRef.current.onopen = () => {
+      // Clear connection timeout
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
+      
       // Add a small delay to ensure the connection is fully established
       setTimeout(() => {
         setIsConnected(true);
         setIsConnecting(false);
         setConnectionAttempts(0);
         setWsError(null);
-        console.log('WebSocket connected successfully');
+        setIsServerUnavailable(false);
+        console.log('✅ WebSocket connected successfully - starting heartbeat');
+        
+        // Start heartbeat mechanism
+        startHeartbeat();
       }, 50);
     };
 
@@ -396,46 +477,29 @@ export const WebSocketProvider = ({ children }) => {
     wsRef.current.onclose = (event) => {
       setIsConnected(false);
       setIsConnecting(false);
-      console.log('WebSocket connection closed. Code:', event.code, 'Reason:', event.reason);
+      stopHeartbeat(); // Stop heartbeat when connection closes
       
-      // Only attempt to reconnect if it was an unexpected close (not manual)
-      // and we haven't reached max attempts AND reconnection is enabled
-      if (event.code !== 1000 && shouldReconnect) {
-        // In development, be less aggressive with reconnection attempts
-        const maxAttemptsForEnv = import.meta.env.DEV ? 3 : MAX_RETRIES;
+      console.log('🔌 WebSocket connection closed. Code:', event.code, 'Reason:', event.reason);
+      
+      // Persistent reconnection while component is mounted
+      if (isMounted && shouldReconnect && event.code !== 1000) {
+        // Calculate delay with exponential backoff (max 30 seconds)
+        const delay = Math.min(Math.pow(2, connectionAttempts) * 1000, 30000);
         
-        if (connectionAttempts < maxAttemptsForEnv) {
-          if (import.meta.env.DEV) {
-            console.warn('WebSocket reconnecting... Attempt', connectionAttempts + 1, '(development mode)');
-          } else {
-            console.log('Attempting to reconnect... Attempt', connectionAttempts + 1);
-          }
-          reconnectTimeoutRef.current = setTimeout(() => {
+        console.log(`🔄 Reconnecting in ${delay/1000}s... (attempt ${connectionAttempts + 1})`);
+        
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (isMounted) {
             setConnectionAttempts(prev => prev + 1);
             connectWebSocket();
-          }, Math.pow(2, connectionAttempts) * 2000); // Slower reconnection in dev
-        } else {
-          // Try next endpoint if available
-          if (currentEndpointIndex < WS_ENDPOINTS.length - 1) {
-            console.log('🔄 Trying next WebSocket endpoint...');
-            setCurrentEndpointIndex(prev => prev + 1);
-            setConnectionAttempts(0); // Reset attempts for new endpoint
-            reconnectTimeoutRef.current = setTimeout(() => {
-              connectWebSocket();
-            }, 2000);
-          } else {
-            if (import.meta.env.DEV) {
-              console.warn('🚫 WebSocket service unavailable (development mode - this is normal)');
-            } else {
-              console.log('🚫 All endpoints exhausted, marking server as unavailable');
-              toast.error('Chat service is currently unavailable');
-            }
-            setIsServerUnavailable(true);
-            setWsError('Chat service is currently unavailable');
           }
-        }
+        }, delay);
       } else if (!shouldReconnect) {
-        console.log('Reconnection disabled, not attempting to reconnect');
+        console.log('🔌 Reconnection disabled, not attempting to reconnect');
+      } else if (!isMounted) {
+        console.log('🔌 Component unmounted, not attempting to reconnect');
+      } else if (event.code === 1000) {
+        console.log('🔌 Clean close, not attempting to reconnect');
       }
     };
 
@@ -460,17 +524,16 @@ export const WebSocketProvider = ({ children }) => {
   }, [isConnecting, connectionAttempts, shouldReconnect, isServerUnavailable, currentEndpointIndex, handleWebSocketMessage]);
 
   const disconnectWebSocket = useCallback(() => {
+    console.log('🔌 Manually disconnecting WebSocket...');
     setShouldReconnect(false); // Disable reconnection when manually disconnecting
     
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    // Clear all timers and stop heartbeat
+    clearAllTimers();
+    stopHeartbeat();
     
-    // Clear any pending reconnection timeouts
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
+    if (wsRef.current) {
+      wsRef.current.close(1000, 'Manual disconnect'); // 1000 = normal closure
+      wsRef.current = null;
     }
     
     setIsConnected(false);
@@ -478,8 +541,8 @@ export const WebSocketProvider = ({ children }) => {
     setConnectionAttempts(0);
     setCurrentEndpointIndex(0); // Reset to first endpoint
     setIsServerUnavailable(false); // Reset server availability when manually disconnecting
-    console.log('WebSocket disconnected');
-  }, []);
+    console.log('✅ WebSocket disconnected cleanly');
+  }, [clearAllTimers, stopHeartbeat]);
 
   // Cancel current streaming response
   const cancelStreamingResponse = useCallback(() => {
@@ -605,15 +668,20 @@ export const WebSocketProvider = ({ children }) => {
 
   // Manual connect function that can be called when needed
   const connect = useCallback(() => {
-    if (!isConnected && !isConnecting) {
-      // Reset connection attempts, endpoint index, and server unavailable flag when manually connecting
-      setConnectionAttempts(0);
-      setCurrentEndpointIndex(0); // Start from first endpoint
-      setIsServerUnavailable(false);
-      setShouldReconnect(true); // Enable reconnection when manually connecting
-      connectWebSocket();
-    }
-  }, [isConnected, isConnecting, shouldReconnect, isServerUnavailable, currentEndpointIndex, connectWebSocket]);
+    console.log('🔌 Manual connection requested');
+    // Reset connection attempts, endpoint index, and server unavailable flag when manually connecting
+    setConnectionAttempts(0);
+    setCurrentEndpointIndex(0); // Start from first endpoint
+    setIsServerUnavailable(false);
+    setShouldReconnect(true); // Enable reconnection when manually connecting
+    
+    // Use timeout to avoid calling connectWebSocket directly in callback
+    setTimeout(() => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        connectWebSocket();
+      }
+    }, 50);
+  }, []); // No dependencies to avoid circular refs
 
   // Initialize ICP when user data changes
   useEffect(() => {
@@ -622,23 +690,35 @@ export const WebSocketProvider = ({ children }) => {
     }
   }, [userData, isGuestUser, initializeICP]);
 
-  // Cleanup on unmount
+  // Enable reconnection on mount and auto-connect
   useEffect(() => {
+    setIsMounted(true);
+    setShouldReconnect(true);
+    
+    // Auto-connect when component mounts
+    console.log('🔌 Auto-connecting on mount...');
+    const timeoutId = setTimeout(() => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        connectWebSocket();
+      }
+    }, 100); // Small delay to ensure state is set
+    
     return () => {
+      console.log('🔌 Component unmounting, cleaning up WebSocket...');
+      clearTimeout(timeoutId);
+      setIsMounted(false);
       setShouldReconnect(false); // Disable reconnection on unmount
       
+      // Clear all timers and stop heartbeat
+      clearAllTimers();
+      stopHeartbeat();
+      
       if (wsRef.current) {
-        wsRef.current.close();
+        wsRef.current.close(1000, 'Component unmount');
         wsRef.current = null;
       }
-      
-      // Clear any pending reconnection timeouts
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
     };
-  }, []);
+  }, []); // Empty dependency array to avoid circular dependencies
 
   const value = {
     isConnected,

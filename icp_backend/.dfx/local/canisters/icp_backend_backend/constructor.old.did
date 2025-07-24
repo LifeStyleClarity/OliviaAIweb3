@@ -1,0 +1,54 @@
+type User = 
+ record {
+   createdAt: int;
+   email: text;
+   firstName: text;
+   id: principal;
+   isGuest: bool;
+   lastName: text;
+   telegramId: opt text;
+   walletAddress: opt text;
+ };
+type Result_2 = 
+ variant {
+   err: text;
+   ok: User;
+ };
+type Result_1 = 
+ variant {
+   err: text;
+   ok: ChatMessage;
+ };
+type Result = 
+ variant {
+   err: text;
+   ok: vec ChatMessage;
+ };
+type ChatMessage = 
+ record {
+   aiResponse: text;
+   conversationId: text;
+   id: text;
+   metadata: record {
+               imageEnabled: bool;
+               searchEnabled: bool;
+             };
+   timestamp: int;
+   userId: principal;
+   userMessage: text;
+ };
+service : {
+  createGuestUser: () -> (Result_2);
+  createUser: (firstName: text, lastName: text, email: text, telegramId:
+   opt text, walletAddress: opt text) -> (Result_2);
+  getConversationMessages: (conversationId: text) -> (Result);
+  getMessageCount: () -> (nat) query;
+  getUser: () -> (Result_2);
+  getUserCount: () -> (nat) query;
+  getUserMessages: () -> (Result);
+  greet: (name: text) -> (text) query;
+  saveMessage: (messageId: text, userMessage: text, aiResponse: text,
+   conversationId: text, searchEnabled: bool, imageEnabled: bool) ->
+   (Result_1);
+  searchMessages: (searchQuery: text) -> (Result);
+}

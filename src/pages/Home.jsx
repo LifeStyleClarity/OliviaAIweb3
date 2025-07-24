@@ -193,21 +193,45 @@ export default function Home() {
     setChatOpenCallback(async (shouldOpen) => {
       if (shouldOpen) {
         setIsChatOpen(true)
-        setIsLoading(true)
-        setMessages([])
+        setIsLoading(false) // Don't show loading initially
+        setMessages([{
+          type: 'ai',
+          content: "Hey there, I've got some interesting stuff I've found! Let me show you."
+        }]) // Show instant greeting
         setCurrentResponse('')
         setShowInput(false)
         setUserInput('')
         
-        // Connect to WebSocket if not connected
-        if (!isConnected) {
-          await connect()
-        }
-        
-        // Send a simple message to get response
-        setTimeout(() => {
-          sendMessage('hey who are you and what day is it')
-        }, 1000)
+        // Show thinking indicator after greeting, then send hidden message
+        setTimeout(async () => {
+          console.log('🤔 Home.jsx: Starting thinking indicator and message send process...');
+          setIsLoading(true) // Show thinking indicator after greeting
+          
+          console.log('🔍 Home.jsx: WebSocket status:', { isConnected });
+          
+          // Always try to connect (it's safe to call multiple times)
+          console.log('🔌 Home.jsx: Ensuring WebSocket connection...');
+          await connect();
+          console.log('✅ Home.jsx: Connect function called');
+          
+          // Wait briefly for the connection event to trigger
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          console.log('📤 Home.jsx: Attempting to send message directly...');
+          
+          try {
+            const result = await sendMessage('hey who are you and what day is it');
+            console.log('📨 Home.jsx: Send message result:', result);
+            
+            if (!result) {
+              console.error('❌ Home.jsx: Send message returned false, stopping loading');
+              setIsLoading(false);
+            }
+          } catch (error) {
+            console.error('❌ Home.jsx: Error sending message:', error);
+            setIsLoading(false); // Stop loading on error
+          }
+        }, 500) // Show thinking after 500ms
       } else {
         setIsChatOpen(false)
         setMessages([])
@@ -221,18 +245,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-6 relative pb-12 min-h-screen overflow-hidden">
-              {/* Temporary Test Button - Remove this later */}
-        {import.meta.env.DEV && (
-          <button
-            onClick={() => {
-              console.log('🧪 Test button clicked!', { isGuestUser, userData });
-              forceShowUpgrade();
-            }}
-            className="fixed top-4 right-4 z-50 bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
-          >
-            Test ICP Upgrade
-          </button>
-        )}
+      
       {/* Animated Particles Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {particles.map(particle => (

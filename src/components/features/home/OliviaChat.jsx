@@ -436,53 +436,125 @@ const OliviaChat = ({ onClose }) => {
     }
   }, [isConnected, messages.length]); // Run when connected or messages change
 
-  // Send initial message when connected (but skip if there's extra data waiting)
+  // Show instant greeting when chat opens, then send hidden message in background
   useEffect(() => {
+    console.log('🔍 Greeting useEffect triggered:', { 
+      messagesLength: messages.length, 
+      hasMessages: messages.length > 0,
+      firstMessage: messages[0],
+      isConnected,
+      userData: userData?.user_id
+    });
+    
     const userId = userData?.user_id || 'guest_user';
     const hasHadInitialMessage = localStorage.getItem(`olivia_initial_message_sent_${userId}`);
     const extraData = getExtraData();
     
-    // Skip automatic crypto search if there's other extra data waiting
+    console.log('🔍 Greeting conditions:', {
+      userId,
+      hasHadInitialMessage,
+      hasExtraData: !!extraData?.sendMessage,
+      messagesLength: messages.length,
+      firstMessageIsStartup: messages[0]?.isStartup
+    });
+    
+    // Skip automatic search if there's other extra data waiting
     if (extraData?.sendMessage) {
-      console.log('🎯 Skipping automatic crypto search - extra data message takes priority');
+      console.log('🎯 Skipping automatic search - extra data message takes priority');
       return;
     }
     
-    if (isConnected && !isServerUnavailable && messages.length === 1 && messages[0]?.isStartup && !hasHadInitialMessage) {
-      console.log('🔍 Connection established, sending initial message...');
+    // Show instant greeting if we haven't sent the initial message yet
+    if (messages.length === 1 && messages[0]?.isStartup && !hasHadInitialMessage) {
+      console.log('💬 Showing instant greeting message...');
       
       const greetingMessage = {
         id: uuidv4(),
         text: "Hey there, I've got some interesting stuff I've found! Let me show you.",
         sender: 'assistant',
         timestamp: new Date().toISOString(),
-        type: 'text'
+        type: 'text',
+        isComplete: true,
+        typingComplete: true
       };
       
       setMessages([greetingMessage]);
       updateServerChatHistory([greetingMessage]);
       
-      const hiddenSearchMessage = "hey who are you and what day is it";
-      
-      const sendSearch = async () => {
-        try {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const conversationHistory = [
-            { role: 'assistant', content: greetingMessage.text }
-          ];
+      // Show thinking indicator after greeting message and send hidden message
+      setTimeout(async () => {
+        setIsStreamingResponse(true); // Show thinking indicator
+        console.log('🤔 Thinking indicator shown, preparing to send hidden message...');
+        console.log('🔍 WebSocket status:', { isConnected, isServerUnavailable });
+        
+        if (isConnected) {
+          console.log('✅ WebSocket ready, sending hidden message immediately...');
           
-          const success = await sendMessage(hiddenSearchMessage, conversationHistory, true, false);
-          if (success) {
-            localStorage.setItem(`olivia_initial_message_sent_${userId}`, 'true');
+          const hiddenSearchMessage = "hey who are you and what day is it";
+          
+          try {
+            const conversationHistory = [
+              { role: 'assistant', content: greetingMessage.text }
+            ];
+            
+            console.log('📤 Sending message:', hiddenSearchMessage);
+            const success = await sendMessage(hiddenSearchMessage, conversationHistory, true, false);
+            
+            if (success) {
+              console.log('✅ Hidden message sent successfully!');
+              localStorage.setItem(`olivia_initial_message_sent_${userId}`, 'true');
+            } else {
+              console.error('❌ Hidden message failed to send');
+              setIsStreamingResponse(false); // Stop thinking if failed
+            }
+          } catch (error) {
+            console.error('❌ Error sending hidden message:', error);
+            setIsStreamingResponse(false); // Stop thinking if error
           }
-        } catch (error) {
-          console.error('Failed to send search message:', error);
+        } else {
+          console.log('⚠️ WebSocket not connected yet, waiting...');
+          
+          // Wait up to 3 seconds for connection
+          let attempts = 0;
+          const maxAttempts = 6; // 3 seconds
+          
+          while (attempts < maxAttempts && !isConnected) {
+            console.log(`⏳ Waiting for connection... attempt ${attempts + 1}/${maxAttempts}`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            attempts++;
+          }
+          
+          if (isConnected) {
+            console.log('✅ Connection established after waiting, sending message...');
+            
+            const hiddenSearchMessage = "hey who are you and what day is it";
+            
+            try {
+              const conversationHistory = [
+                { role: 'assistant', content: greetingMessage.text }
+              ];
+              
+              const success = await sendMessage(hiddenSearchMessage, conversationHistory, true, false);
+              
+              if (success) {
+                console.log('✅ Hidden message sent after waiting!');
+                localStorage.setItem(`olivia_initial_message_sent_${userId}`, 'true');
+              } else {
+                console.error('❌ Hidden message failed after waiting');
+                setIsStreamingResponse(false);
+              }
+            } catch (error) {
+              console.error('❌ Error sending message after waiting:', error);
+              setIsStreamingResponse(false);
+            }
+          } else {
+            console.error('❌ WebSocket never connected, stopping thinking indicator');
+            setIsStreamingResponse(false);
+          }
         }
-      };
-      
-      sendSearch();
+      }, 500);
     }
-  }, [isConnected, isServerUnavailable, messages.length, messages, sendMessage, userData, updateServerChatHistory]);
+  }, [messages.length, messages, isConnected, sendMessage, userData, updateServerChatHistory]);
 
   const handleSendMessage = useCallback(async (message) => {
     console.log('🚀 Sending message:', message);
