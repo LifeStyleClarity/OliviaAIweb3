@@ -2,7 +2,7 @@ import { Actor, HttpAgent } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
 
 // Canister ID from your deployment
-const CANISTER_ID = 'lqy7q-dh777-77777-aaaaq-cai';
+const CANISTER_ID = 'uxrrr-q7777-77774-qaaaq-cai';
 
 // Local development host
 const HOST = 'http://localhost:4943';
