@@ -13,7 +13,7 @@ function QrCode() {
                     Scan the QR code below to continue.
                 </p>
                 <img
-                    src="qr-code-olivia.png"
+                    src="/qr-code-olivia.png"
                     alt="QR Code"
                     className="w-100 h-100 mx-auto mb-4"
                 />
