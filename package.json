@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "cd icp_backend && dfx deploy && cd .. && node update-canister-id.js",
+    "start-local": "dfx start --clean --background && npm run deploy && npm run dev"
   },
   "dependencies": {
     "@dfinity/agent": "^2.4.1",

@@ -35,7 +35,7 @@ export default function Layout() {
     if (import.meta.env.DEV) {
       window.forceUpgradePrompt = forceShowUpgrade;
       if (!window._devHelpersLogged) {
-        console.log('🧪 Dev helper: Use window.forceUpgradePrompt() to test upgrade flow');
+        console.log('Dev helper: Use window.forceUpgradePrompt() to test upgrade flow');
         window._devHelpersLogged = true;
       }
     }

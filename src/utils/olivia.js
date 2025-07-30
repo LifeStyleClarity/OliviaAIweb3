@@ -16,7 +16,7 @@ export function setChatOpenCallback(callback) {
 // Store extra data for chat usage and open chat
 export function startOliviaChat(extraData) {
   extraDataRef = extraData;
-  console.log('🚀 Olivia chat data stored:', extraData);
+  console.log('Olivia chat data stored:', extraData);
   
   // Open the chat if callback is available
   if (chatOpenCallback) {

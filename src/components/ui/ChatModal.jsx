@@ -102,13 +102,13 @@ const ChatModal = () => {
     let timeoutId;
     
     if (isOpen && !isConnected && !isConnecting) {
-      console.log('🔌 Connecting WebSocket when modal opens');
+      console.log(' Connecting WebSocket when modal opens');
       // Small delay to prevent rapid open/close cycles
       timeoutId = setTimeout(() => {
         connect();
       }, 100);
     } else if (!isOpen) {
-      console.log('🔌 Modal closed, disconnecting WebSocket');
+      console.log(' Modal closed, disconnecting WebSocket');
       disconnect();
     }
     
@@ -365,7 +365,7 @@ const ChatModal = () => {
     const { data: chunkData } = data;
     const text = chunkData.text || '';
     
-    console.log('🟦 Explanation chunk received:', { text: text.substring(0, 100), length: text.length });
+    console.log(' Explanation chunk received:', { text: text.substring(0, 100), length: text.length });
     
     if (text) {
       // Update the explanation in real-time like stream chunks
@@ -394,7 +394,7 @@ const ChatModal = () => {
             isExplanation: true,
             completed: false // Mark as streaming
           };
-          console.log('🟦 Creating new explanation message:', newExplanationMessage);
+          console.log(' Creating new explanation message:', newExplanationMessage);
           const updatedMessages = [...newMessages, newExplanationMessage];
           updateServerChatHistory(updatedMessages);
           return updatedMessages;
@@ -462,7 +462,7 @@ const ChatModal = () => {
   useEffect(() => {
     return () => {
       // Clean up WebSocket connection when component unmounts
-      console.log('🔌 ChatModal unmounting, cleaning up');
+      console.log(' ChatModal unmounting, cleaning up');
       disconnect();
       disconnectAudio();
       setWebsocketRunning(false);
@@ -498,7 +498,7 @@ const ChatModal = () => {
     
     // Only proceed if we have the startup message and haven't sent initial message
     if (isOpen && messages.length === 1 && messages[0]?.isStartup && !hasHadInitialMessage && !isProcessingRef.current) {
-      console.log('✅ Replacing startup message with greeting');
+              console.log('Replacing startup message with greeting');
       
       let greetingMessage;
       
@@ -553,7 +553,7 @@ const ChatModal = () => {
       const greetingMessage = messages[0];
       
       if (greetingMessage.sender === 'assistant') {
-        console.log('🔍 Connection established, sending search message...');
+        console.log(' Connection established, sending search message...');
         
         const hiddenSearchMessage = "hey who are you and what day is it";
         
@@ -567,11 +567,11 @@ const ChatModal = () => {
               { role: 'assistant', content: greetingMessage.text }
             ];
             
-                         console.log('🔍 Sending hidden search message:', hiddenSearchMessage);
+                         console.log(' Sending hidden search message:', hiddenSearchMessage);
              const success = await sendMessage(hiddenSearchMessage, conversationHistory, true, false);
              
              if (success) {
-               console.log('✅ Search message sent successfully');
+               console.log('Search message sent successfully');
                // Mark that initial message has been sent for this user
                localStorage.setItem(`olivia_initial_message_sent_${userData?.user_id || 'guest'}`, 'true');
              } else {
@@ -593,7 +593,7 @@ const ChatModal = () => {
   }, [isOpen, isConnected, isServerUnavailable, messages.length, messages, sendMessage, userData]);
 
   const handleSendMessage = useCallback(async (message) => {
-    console.log('🚀 Sending message:', message);
+          console.log('Sending message:', message);
     
     // Set loading state immediately for instant feedback
     setIsStreamingResponse(true);
@@ -625,7 +625,7 @@ const ChatModal = () => {
       // Send via WebSocket using the context
       const sent = await sendMessage(message, conversationHistory, searchEnabled, imageEnabled);
       
-      console.log('📤 Message sent status:', sent);
+      console.log(' Message sent status:', sent);
       
       if (!sent) {
         throw new Error('Failed to send message - WebSocket not connected');
@@ -638,7 +638,7 @@ const ChatModal = () => {
 
       // Set a timeout to clear the streaming state if no response comes back
       setTimeout(() => {
-        console.log('⏰ Timeout: No response received, clearing streaming state');
+        console.log('Timeout: No response received, clearing streaming state');
         setIsStreamingResponse(false);
       }, 30000); // 30 second timeout
       

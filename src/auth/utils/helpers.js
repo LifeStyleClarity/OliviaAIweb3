@@ -35,7 +35,7 @@ export const shortenPublicKey = (key) => {
  * @returns {Object|null} Telegram user info or null if not in Telegram environment
  */
 export const getTelegramUserInfo = () => {
-  //console.log('🔍 Checking for Telegram environment...');
+  //console.log(' Checking for Telegram environment...');
 
   // Check if we're in Telegram environment
   const hasTelegram = !!window.Telegram;
@@ -60,7 +60,7 @@ export const getTelegramUserInfo = () => {
     const user = tg.initDataUnsafe.user;
 
     if (user) {
-      //console.log('✅ Found Telegram user:', user);
+      //console.log( Found Telegram user:', user);
       const telegramData = {
         telegramId: user.id,
         telegramInfo: [{

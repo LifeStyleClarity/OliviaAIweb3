@@ -1,30 +1,4 @@
-/**
- * API Module
- * 
- * This module exports all API-related functionality:
- * 
- * Services:
- * - chatService: WebSocket chat and audio communication
- * - authService: Authentication services
- * - notificationService: Notification handling
- * - airdropService: Airdrop functionality
- * - icpService: ICP blockchain integration
- * 
- * Configuration:
- * - ENDPOINTS: API endpoint configuration
- * 
- * Usage examples:
- * 
- * ```javascript
- * // Chat service
- * import { chatService } from '@/api';
- * const wsUrl = chatService.getChatWebSocketUrl();
- * const messageData = chatService.createMessageData("Hello", previousMessages);
- * 
- * // Auth service
- * import { authService } from '@/api';
- * ```
- */
+// API exports
 
 // Services - only export services that actually exist
 export { chatService } from './services/chat.service.js';

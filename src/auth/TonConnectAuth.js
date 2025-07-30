@@ -97,7 +97,7 @@ export const useTonConnectAuth = () => {
     setLoading(true);
     try {
       const walletAddress = String(wallet.account.address);
-      //console.log('🔍 Checking if user exists for wallet:', walletAddress);
+      //console.log(' Checking if user exists for wallet:', walletAddress);
 
       // Get Telegram info
       const telegramInfo = getTelegramInfo();
@@ -116,11 +116,11 @@ export const useTonConnectAuth = () => {
 
       if (user) {
         //console.log("user:", user);
-        //console.log('✅ User exists with this wallet');
+        //console.log( User exists with this wallet');
 
         // Update Telegram info if needed
         if (user.telegram_info === null || !user.telegram_info || user.telegram_info.length === 0) {
-          //console.log('❌ User has no Telegram info');
+          //console.log( User has no Telegram info');
           //console.log("user: ", user.user_id)
           if (telegramInfo.length > 0) {
             //console.log('✨ Updating user with Telegram info');
@@ -151,7 +151,7 @@ export const useTonConnectAuth = () => {
           telegramId
         };
       } else {
-        //console.log('❌ No user found for this wallet');
+        //console.log( No user found for this wallet');
 
         // Check if there are any accounts with this Telegram ID
         if (telegramUsers && telegramUsers.length > 0) {
@@ -175,7 +175,7 @@ export const useTonConnectAuth = () => {
         };
       }
     } catch (error) {
-      console.error('❌ Error checking user:', error);
+              console.error('Error checking user:', error);
       setError(error);
     } finally {
       setLoading(false);
@@ -199,7 +199,7 @@ export const useTonConnectAuth = () => {
       await tonConnectUI.disconnect();
       navigate('/login');
     } catch (error) {
-      console.error('❌ Error disconnecting:', error);
+      console.error('Error disconnecting:', error);
       toast.error(error.message);
       // Still try to navigate even if disconnect fails
       navigate('/login');

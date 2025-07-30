@@ -14,9 +14,9 @@ export const useWebSocket = () => {
   return context;
 };
 
-const MAX_RETRIES = 10; // Increased for persistence
-const HEARTBEAT_INTERVAL = 30000; // 30 seconds
-const CONNECTION_TIMEOUT = 60000; // 60 seconds
+const MAX_RETRIES = 10; 
+const HEARTBEAT_INTERVAL = 30000; 
+const CONNECTION_TIMEOUT = 60000;
 
 export const WebSocketProvider = ({ children }) => {
   const wsRef = useRef(null);
@@ -27,7 +27,7 @@ export const WebSocketProvider = ({ children }) => {
   const heartbeatIntervalRef = useRef(null);
   const connectionTimeoutRef = useRef(null);
   const lastPongRef = useRef(null);
-  const pendingMessagesRef = useRef(new Map()); // Use ref instead of state
+  const pendingMessagesRef = useRef(new Map()); // TODO: might need to optimize this
   
   const [isConnected, setIsConnected] = useState(false);
   const [connectionAttempts, setConnectionAttempts] = useState(0);
@@ -78,7 +78,7 @@ export const WebSocketProvider = ({ children }) => {
 
   // Start heartbeat/ping mechanism
   const startHeartbeat = useCallback(() => {
-    console.log('💓 Starting WebSocket heartbeat mechanism');
+    console.log('Starting WebSocket heartbeat mechanism');
     
     clearInterval(heartbeatIntervalRef.current);
     lastPongRef.current = Date.now();
@@ -89,7 +89,7 @@ export const WebSocketProvider = ({ children }) => {
         
         // Check if we missed a pong (connection might be dead)
         if (lastPongRef.current && (now - lastPongRef.current) > (HEARTBEAT_INTERVAL * 2)) {
-          console.warn('💓 Heartbeat timeout detected, reconnecting...');
+          console.warn('Heartbeat timeout detected, reconnecting...');
           wsRef.current.close(1000, 'Heartbeat timeout');
           return;
         }
@@ -97,9 +97,9 @@ export const WebSocketProvider = ({ children }) => {
         // Send ping
         try {
           wsRef.current.send(JSON.stringify({ type: 'ping', timestamp: now }));
-          console.log('💓 Ping sent');
+          console.log('Ping sent');
         } catch (error) {
-          console.error('💓 Failed to send ping:', error);
+          console.error('Failed to send ping:', error);
           wsRef.current.close(1000, 'Ping failed');
         }
       }
@@ -108,7 +108,7 @@ export const WebSocketProvider = ({ children }) => {
 
   // Stop heartbeat
   const stopHeartbeat = useCallback(() => {
-    console.log('💓 Stopping WebSocket heartbeat');
+    console.log('Stopping WebSocket heartbeat');
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
@@ -128,39 +128,39 @@ export const WebSocketProvider = ({ children }) => {
   // Initialize ICP and create/get user
   const initializeICP = useCallback(async () => {
     if (icpInitialized) {
-      console.log('🟦 ICP already initialized');
+      console.log('ICP already initialized');
       return;
     }
     
     try {
-      console.log('🟦 Initializing ICP for user...', { userData, isGuestUser });
+      console.log('Initializing ICP for user...', { userData, isGuestUser });
       
       // Test ICP connection first
       const connectionTest = await icpService.testConnection();
       if (!connectionTest.success) {
         if (import.meta.env.DEV) {
-          console.warn('🟦 ICP connection failed (development mode - this is normal if local ICP network is not running)');
+          console.warn('ICP connection failed (development mode - this is normal if local ICP network is not running)');
           return;
         } else {
-          console.error('🟦 ICP connection failed:', connectionTest.error);
+          console.error('ICP connection failed:', connectionTest.error);
           return;
         }
       }
       
-      console.log('🟦 ICP connection test successful:', connectionTest.message);
+      console.log('ICP connection test successful:', connectionTest.message);
       
       // Try to get existing user
       let user = await icpService.getUser();
       
       if (!user.success) {
-        console.log('🟦 Creating new ICP user...', {
+        console.log('Creating new ICP user...', {
           hasUserData: !!userData,
           isGuestUser: isGuestUser,
           userData: userData
         });
         // Create new user based on auth data
         if (userData && !isGuestUser) {
-          console.log('🟦 Creating REGULAR user because userData exists and not guest mode');
+          console.log(' Creating REGULAR user because userData exists and not guest mode');
           const [firstName = '', ...lastNameParts] = (userData.contact_name || '').split(' ');
           const lastName = lastNameParts.join(' ');
           
@@ -172,7 +172,7 @@ export const WebSocketProvider = ({ children }) => {
             userData.crypto_wallet_address || null
           );
         } else {
-          console.log('🟦 Creating GUEST user because no userData or in guest mode', {
+          console.log(' Creating GUEST user because no userData or in guest mode', {
             hasUserData: !!userData,
             isGuestUser: isGuestUser
           });
@@ -189,27 +189,27 @@ export const WebSocketProvider = ({ children }) => {
         if (!conversationId) {
           const newConversationId = generateConversationId();
           setConversationId(newConversationId);
-          console.log('🟦 Generated conversation ID:', newConversationId);
+          console.log('Generated conversation ID:', newConversationId);
         }
         
-        console.log('🟦 ICP user initialized successfully:', user.user);
+        console.log('ICP user initialized successfully:', user.user);
       } else {
-        console.error('🟦 Failed to create/get ICP user:', user.error);
+        console.error('Failed to create/get ICP user:', user.error);
       }
     } catch (error) {
-      console.error('🟦 ICP initialization error:', error);
+      console.error('ICP initialization error:', error);
     }
   }, [userData, isGuestUser, icpInitialized, conversationId]);
 
   // Retrieve conversation history from ICP
   const getConversationHistory = useCallback(async (limit = 10) => {
     if (!icpInitialized || !icpUser || !conversationId) {
-      console.log('🟦 ICP not ready for history retrieval');
+      console.log(' ICP not ready for history retrieval');
       return [];
     }
     
     try {
-      console.log('🟦 Retrieving conversation history from ICP...');
+      console.log('Retrieving conversation history from ICP...');
       
       // Get messages for this conversation
       const result = await icpService.getConversationMessages(conversationId);
@@ -234,7 +234,7 @@ export const WebSocketProvider = ({ children }) => {
           });
         });
         
-        console.log('🟦 Retrieved conversation history:', {
+        console.log('Retrieved conversation history:', {
           totalMessages: result.messages.length,
           recentMessages: recentMessages.length,
           formattedHistory: formattedHistory.length
@@ -242,18 +242,18 @@ export const WebSocketProvider = ({ children }) => {
         
         return formattedHistory;
       } else {
-        console.log('🟦 No conversation history found or failed to retrieve');
+        console.log('No conversation history found or failed to retrieve');
         return [];
       }
     } catch (error) {
-      console.error('🟦 Error retrieving conversation history:', error);
+      console.error('Error retrieving conversation history:', error);
       return [];
     }
   }, [icpInitialized, icpUser, conversationId]);
 
   // Save message to ICP
   const saveToICP = useCallback(async (userMessage, aiResponse, requestId) => {
-    console.log('🟦 saveToICP called with:', { 
+    console.log(' saveToICP called with:', { 
       userMessage, 
       aiResponse, 
       requestId,
@@ -264,7 +264,7 @@ export const WebSocketProvider = ({ children }) => {
     });
     
     if (!icpInitialized || !icpUser || !conversationId) {
-      console.log('🟦 ICP not ready, skipping save', {
+      console.log(' ICP not ready, skipping save', {
         icpInitialized,
         hasIcpUser: !!icpUser,
         hasConversationId: !!conversationId
@@ -273,7 +273,7 @@ export const WebSocketProvider = ({ children }) => {
     }
     
     try {
-      console.log('🟦 Saving message to ICP:', { userMessage, aiResponse, requestId });
+      console.log(' Saving message to ICP:', { userMessage, aiResponse, requestId });
       
       const messageId = `msg_${requestId}_${Date.now()}`;
       const result = await icpService.saveMessage(
@@ -286,15 +286,15 @@ export const WebSocketProvider = ({ children }) => {
       );
       
       if (result.success) {
-        console.log('🟦 Message saved to ICP successfully:', result.message);
+        console.log(' Message saved to ICP successfully:', result.message);
         
         // Remove from pending messages
         pendingMessagesRef.current.delete(requestId);
       } else {
-        console.error('🟦 Failed to save message to ICP:', result.error);
+        console.error(' Failed to save message to ICP:', result.error);
       }
     } catch (error) {
-      console.error('🟦 Error saving to ICP:', error);
+      console.error(' Error saving to ICP:', error);
     }
   }, [icpInitialized, icpUser, conversationId]);
 
@@ -321,7 +321,7 @@ export const WebSocketProvider = ({ children }) => {
       case 'pong':
         // Handle pong response from server
         lastPongRef.current = Date.now();
-        console.log('💓 Pong received, connection healthy');
+        console.log('Pong received, connection healthy');
         break;
       case 'stream_chunk':
         setIsStreamingResponse(true);
@@ -329,7 +329,7 @@ export const WebSocketProvider = ({ children }) => {
       case 'stream_complete':
         setIsStreamingResponse(false);
         // Save completed message to ICP
-        console.log('🟦 Stream complete received:', { 
+        console.log('Stream complete received:', { 
           requestId: data.requestId, 
           hasData: !!data.data,
           pendingMessagesCount: pendingMessagesRef.current.size,
@@ -338,7 +338,7 @@ export const WebSocketProvider = ({ children }) => {
         
         if (data.requestId && data.data) {
           const pendingMessage = pendingMessagesRef.current.get(data.requestId);
-          console.log('🟦 Found pending message:', { 
+          console.log('Found pending message:', { 
             hasPendingMessage: !!pendingMessage,
             pendingMessage,
             requestId: data.requestId
@@ -346,17 +346,17 @@ export const WebSocketProvider = ({ children }) => {
           
           if (pendingMessage) {
             const aiResponse = data.data.fullResponse || data.data.text || '';
-            console.log('🟦 Calling saveToICP with:', {
+            console.log('Calling saveToICP with:', {
               userMessage: pendingMessage.userMessage,
               aiResponse: aiResponse.substring(0, 100) + '...',
               requestId: data.requestId
             });
             saveToICP(pendingMessage.userMessage, aiResponse, data.requestId);
           } else {
-            console.log('🟦 No pending message found for requestId:', data.requestId);
+            console.log('No pending message found for requestId:', data.requestId);
           }
         } else {
-          console.log('🟦 Missing requestId or data in stream_complete:', { 
+          console.log('Missing requestId or data in stream_complete:', { 
             hasRequestId: !!data.requestId,
             hasData: !!data.data
           });
@@ -379,17 +379,17 @@ export const WebSocketProvider = ({ children }) => {
         }
         break;
       case 'connection':
-        console.log('✅ WebSocket connection established:', data.message);
+        console.log('WebSocket connection established:', data.message);
         // Connection is ready, initialize ICP
-        console.log('🟦 WebSocket connected, calling initializeICP...');
+        console.log('WebSocket connected, calling initializeICP...');
         initializeICP();
         break;
       case 'text':
-        console.log('📝 Received text message:', data);
+        console.log('Received text message:', data);
         // Text messages are handled by the ChatModal component through subscription
         break;
       case 'response':
-        console.log('📝 Received response message:', data);
+        console.log('Received response message:', data);
         // Response messages are handled by the ChatModal component through subscription
         break;
       default:
@@ -431,12 +431,12 @@ export const WebSocketProvider = ({ children }) => {
     setWsError(null);
 
     const wsUrl = WS_ENDPOINTS[currentEndpointIndex];
-    console.log('🔌 Connecting to Olivia AI WebSocket:', wsUrl, '(attempt:', connectionAttempts + 1, ')');
+    console.log('Connecting to Olivia AI WebSocket:', wsUrl, '(attempt:', connectionAttempts + 1, ')');
     
     // Set connection timeout
     connectionTimeoutRef.current = setTimeout(() => {
       if (wsRef.current && wsRef.current.readyState !== WebSocket.OPEN) {
-        console.warn('🔌 Connection timeout, closing WebSocket');
+        console.warn('Connection timeout, closing WebSocket');
         wsRef.current.close();
       }
     }, CONNECTION_TIMEOUT);
@@ -457,7 +457,7 @@ export const WebSocketProvider = ({ children }) => {
         setConnectionAttempts(0);
         setWsError(null);
         setIsServerUnavailable(false);
-        console.log('✅ WebSocket connected successfully - starting heartbeat');
+        console.log('WebSocket connected successfully - starting heartbeat');
         
         // Start heartbeat mechanism
         startHeartbeat();
@@ -467,7 +467,7 @@ export const WebSocketProvider = ({ children }) => {
     wsRef.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('📨 Received WebSocket message:', data);
+        console.log('Received WebSocket message:', data);
         handleWebSocketMessage(data);
       } catch (error) {
         console.error('Error parsing WebSocket message:', error);
@@ -479,7 +479,7 @@ export const WebSocketProvider = ({ children }) => {
       setIsConnecting(false);
       stopHeartbeat(); // Stop heartbeat when connection closes
       
-      console.log('🔌 WebSocket connection closed. Code:', event.code, 'Reason:', event.reason);
+      console.log(' WebSocket connection closed. Code:', event.code, 'Reason:', event.reason);
       
       // Persistent reconnection while component is mounted
       if (isMounted && shouldReconnect && event.code !== 1000) {
@@ -495,11 +495,11 @@ export const WebSocketProvider = ({ children }) => {
           }
         }, delay);
       } else if (!shouldReconnect) {
-        console.log('🔌 Reconnection disabled, not attempting to reconnect');
+        console.log(' Reconnection disabled, not attempting to reconnect');
       } else if (!isMounted) {
-        console.log('🔌 Component unmounted, not attempting to reconnect');
+        console.log(' Component unmounted, not attempting to reconnect');
       } else if (event.code === 1000) {
-        console.log('🔌 Clean close, not attempting to reconnect');
+        console.log(' Clean close, not attempting to reconnect');
       }
     };
 
@@ -524,7 +524,7 @@ export const WebSocketProvider = ({ children }) => {
   }, [isConnecting, connectionAttempts, shouldReconnect, isServerUnavailable, currentEndpointIndex, handleWebSocketMessage]);
 
   const disconnectWebSocket = useCallback(() => {
-    console.log('🔌 Manually disconnecting WebSocket...');
+    console.log(' Manually disconnecting WebSocket...');
     setShouldReconnect(false); // Disable reconnection when manually disconnecting
     
     // Clear all timers and stop heartbeat
@@ -541,7 +541,7 @@ export const WebSocketProvider = ({ children }) => {
     setConnectionAttempts(0);
     setCurrentEndpointIndex(0); // Reset to first endpoint
     setIsServerUnavailable(false); // Reset server availability when manually disconnecting
-    console.log('✅ WebSocket disconnected cleanly');
+    console.log( WebSocket disconnected cleanly');
   }, [clearAllTimers, stopHeartbeat]);
 
   // Cancel current streaming response
@@ -576,12 +576,12 @@ export const WebSocketProvider = ({ children }) => {
 
   const sendMessage = useCallback(async (message, conversationHistory = [], searchEnabled = false, imageEnabled = false) => {
     if (!wsRef.current) {
-      console.log('❌ WebSocket reference is null');
+      console.log( WebSocket reference is null');
       return false;
     }
     
     if (wsRef.current.readyState !== WebSocket.OPEN) {
-      console.log('❌ WebSocket is not connected. State:', wsRef.current.readyState, 'Expected:', WebSocket.OPEN);
+      console.log( WebSocket is not connected. State:', wsRef.current.readyState, 'Expected:', WebSocket.OPEN);
       return false;
     }
 
@@ -592,7 +592,7 @@ export const WebSocketProvider = ({ children }) => {
     let historyToSend = conversationHistory;
     if (historyToSend.length === 0) {
       historyToSend = await getConversationHistory(10); // Get last 10 message pairs
-      console.log('🟦 Retrieved conversation history for AI context:', {
+      console.log('Retrieved conversation history for AI context:', {
         historyLength: historyToSend.length,
         hasHistory: historyToSend.length > 0
       });
@@ -615,7 +615,7 @@ export const WebSocketProvider = ({ children }) => {
     };
 
     try {
-      console.log('📡 Sending WebSocket message with history:', {
+      console.log('Sending WebSocket message with history:', {
         ...messageData,
         data: {
           ...messageData.data,
@@ -633,13 +633,13 @@ export const WebSocketProvider = ({ children }) => {
         imageEnabled
       });
       
-      console.log('🟦 Added message to pending:', { 
+      console.log('Added message to pending:', { 
         requestId,
         message: message.substring(0, 50) + '...',
         pendingCount: pendingMessagesRef.current.size
       });
       
-      console.log('✅ Message sent successfully with requestId:', requestId);
+      console.log('Message sent successfully with requestId:', requestId);
       
       // Return the requestId so upgrade tracking can be done by the caller
       return requestId;
@@ -668,7 +668,7 @@ export const WebSocketProvider = ({ children }) => {
 
   // Manual connect function that can be called when needed
   const connect = useCallback(() => {
-    console.log('🔌 Manual connection requested');
+    console.log('Manual connection requested');
     // Reset connection attempts, endpoint index, and server unavailable flag when manually connecting
     setConnectionAttempts(0);
     setCurrentEndpointIndex(0); // Start from first endpoint
@@ -696,7 +696,7 @@ export const WebSocketProvider = ({ children }) => {
     setShouldReconnect(true);
     
     // Auto-connect when component mounts
-    console.log('🔌 Auto-connecting on mount...');
+    console.log(' Auto-connecting on mount...');
     const timeoutId = setTimeout(() => {
       if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
         connectWebSocket();
@@ -704,7 +704,7 @@ export const WebSocketProvider = ({ children }) => {
     }, 100); // Small delay to ensure state is set
     
     return () => {
-      console.log('🔌 Component unmounting, cleaning up WebSocket...');
+      console.log('Component unmounting, cleaning up WebSocket...');
       clearTimeout(timeoutId);
       setIsMounted(false);
       setShouldReconnect(false); // Disable reconnection on unmount

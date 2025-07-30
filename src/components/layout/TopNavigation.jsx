@@ -73,7 +73,7 @@ export default function TopNavigation() {
   // Debug logging for ICP state changes
   useEffect(() => {
     if (import.meta.env.DEV) {
-      console.log('🔑 TopNav ICP State:', {
+      console.log('TopNav ICP State:', {
         isGuestUser,
         icpInitialized,
         hasICPUser: !!icpUser,

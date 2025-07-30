@@ -33,7 +33,7 @@ const ChatMessages = ({
 
 
 
-  console.log('🟦 ChatMessages rendering:', { messageCount: messages.length, messages: messages.map(m => ({ sender: m.sender, type: m.type, isExplanation: m.isExplanation, text: m.text?.substring(0, 50) })) });
+  console.log('ChatMessages rendering:', { messageCount: messages.length, messages: messages.map(m => ({ sender: m.sender, type: m.type, isExplanation: m.isExplanation, text: m.text?.substring(0, 50) })) });
   
   return (
     <div className="flex  flex-col gap-4 h-full">

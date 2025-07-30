@@ -1,10 +1,7 @@
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
 
-// Canister ID from your deployment
 const CANISTER_ID = 'lqy7q-dh777-77777-aaaaq-cai';
-
-// Local development host
 const HOST = 'http://localhost:4943';
 
 // IDL factory for the canister interface
@@ -76,9 +73,9 @@ const createAgent = async (identity = null) => {
       // Use provided identity if available (Internet Identity)
       if (identity) {
         agentOptions.identity = identity;
-        console.log('🟦 Creating ICP Agent with Internet Identity');
+        console.log('Creating ICP Agent with Internet Identity');
       } else {
-        console.log('🟦 Creating ICP Agent with anonymous identity');
+        console.log('Creating ICP Agent with anonymous identity');
       }
       
       const newAgent = new HttpAgent(agentOptions);
@@ -88,20 +85,19 @@ const createAgent = async (identity = null) => {
         await newAgent.fetchRootKey();
       }
       
-      // Update the global agent reference
       if (identity) {
-        agent = newAgent; // Store authenticated agent
+        agent = newAgent;
       } else if (!agent) {
-        agent = newAgent; // Store anonymous agent only if none exists
+        agent = newAgent;
       }
       
-      console.log('🟦 ICP Agent created successfully');
+      console.log('ICP Agent created successfully');
       return newAgent;
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.warn('🟦 ICP agent connection failed (development mode):', error.message);
+        console.warn('ICP agent connection failed (development mode):', error.message);
       } else {
-        console.error('🟦 Failed to create ICP agent:', error);
+        console.error('Failed to create ICP agent:', error);
       }
       throw error;
     }
@@ -137,7 +133,7 @@ export const icpService = {
     agent = null;
     actor = null;
     this._currentIdentity = identity;
-    console.log('🟦 Internet Identity set for ICP service');
+    console.log('Internet Identity set for ICP service');
   },
 
   // Test connection
@@ -148,7 +144,7 @@ export const icpService = {
       return { success: true, message: result };
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.warn('🟦 ICP connection test failed (development mode):', error.message);
+        console.warn('ICP connection test failed (development mode):', error.message);
       } else {
         console.error('ICP connection test failed:', error);
       }

@@ -118,7 +118,7 @@ export default function Home() {
     if (!isChatOpen) return
 
     const handleMessage = (data) => {
-      console.log('📨 Received message:', data)
+      console.log('Received message:', data)
       
       if (data.type === 'stream_chunk') {
         setCurrentResponse(prev => prev + (data.data?.text || data.content || ''))
@@ -204,31 +204,31 @@ export default function Home() {
         
         // Show thinking indicator after greeting, then send hidden message
         setTimeout(async () => {
-          console.log('🤔 Home.jsx: Starting thinking indicator and message send process...');
+          console.log('Home.jsx: Starting thinking indicator and message send process...');
           setIsLoading(true) // Show thinking indicator after greeting
           
-          console.log('🔍 Home.jsx: WebSocket status:', { isConnected });
+          console.log('Home.jsx: WebSocket status:', { isConnected });
           
           // Always try to connect (it's safe to call multiple times)
-          console.log('🔌 Home.jsx: Ensuring WebSocket connection...');
+          console.log('Home.jsx: Ensuring WebSocket connection...');
           await connect();
-          console.log('✅ Home.jsx: Connect function called');
+          console.log('Home.jsx: Connect function called');
           
           // Wait briefly for the connection event to trigger
           await new Promise(resolve => setTimeout(resolve, 1000));
           
-          console.log('📤 Home.jsx: Attempting to send message directly...');
+          console.log('Home.jsx: Attempting to send message directly...');
           
           try {
             const result = await sendMessage('hey who are you and what day is it');
-            console.log('📨 Home.jsx: Send message result:', result);
+            console.log('Home.jsx: Send message result:', result);
             
             if (!result) {
-              console.error('❌ Home.jsx: Send message returned false, stopping loading');
+              console.error('Home.jsx: Send message returned false, stopping loading');
               setIsLoading(false);
             }
           } catch (error) {
-            console.error('❌ Home.jsx: Error sending message:', error);
+            console.error('Home.jsx: Error sending message:', error);
             setIsLoading(false); // Stop loading on error
           }
         }, 500) // Show thinking after 500ms

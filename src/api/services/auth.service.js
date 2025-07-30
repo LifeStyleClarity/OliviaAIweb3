@@ -4,7 +4,7 @@ import axiosInstanceAPIGateway from '../config/axios-gateway.js';
 export const checkUserExists = async (walletAddress) => {
   try {
     const response = await axiosInstanceAPIGateway.get(ENDPOINTS.USER.GET_USER_BY_WALLET.replace(":walletAddress", walletAddress));
-    //console.log('✅ API Response:', {
+    //console.log( API Response:', {
     //   status: response.success,
     //   data: response.data
     // });
@@ -15,7 +15,7 @@ export const checkUserExists = async (walletAddress) => {
     //   return response.data;
     // }
   } catch (error) {
-    console.error('❌ API Error:', {
+    console.error('API Error:', {
       status: error.response?.success,
       data: error.response?.data.data,
       message: error.message,
@@ -36,10 +36,10 @@ export const getAllUsersTelegramId = async (telegramId) => {
 
   try {
     const response = await axiosInstanceAPIGateway.get(ENDPOINTS.USER.GET_USER_BY_TG_ID.replace(":tg_id", telegramId));
-    //console.log('✅ Found Telegram users:', response.data.data);
+    //console.log( Found Telegram users:', response.data.data);
     return response.data.data;
   } catch (error) {
-    console.error('❌ Error getting Telegram users:', {
+    console.error('Error getting Telegram users:', {
       status: error.response?.success,
       data: error.response?.data.data,
       message: error.message
