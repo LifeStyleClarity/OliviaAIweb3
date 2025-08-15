@@ -35,17 +35,20 @@ export * as authService from './services/auth.service.js';
 export { notificationService } from './services/notification.service.js';
 export { tradeService } from './services/trade.service.js';
 export { profileService } from './services/profile.service.js';
-export { airdropService } from './services/airdrop.service.js';
 export { transactionService } from './services/transaction.service.js';
 export { tokenService } from './services/token.service.js';
 export { aiService } from './services/ai.service.js';
+export { lurkyService } from './services/lurky.service.js';
+export { coingeckoService } from './services/coingecko.service.js';
+export { coinstatsService } from './services/coinstats.service.js';
+export { changeNowService } from './services/changenow.service.js';
+export { hgraphService } from './services/hgraph.service.js';
 
 // Types
 export * from './types/social.types.js';
 export * from './types/auth.types.js';
 export * from './types/notification.types.js';
 export * from './types/trade.types.js';
-export * from './types/airdrop.types.js';
 export * from './types/chat.types.js';
 export * from './types/token.types.js';
 

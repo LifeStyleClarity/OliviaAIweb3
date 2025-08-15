@@ -3,6 +3,8 @@ import { Button } from '@heroui/react'
 import { Card, CardBody, CardHeader } from '@heroui/react'
 import ChatMigrationTest from '../components/ui/ChatMigrationTest'
 import ICPTestPage from '../components/ICPTestPage'
+import PrivacyFilterTest from '../components/PrivacyFilterTest'
+import TradingTest from '../components/TradingTest'
 
 export default function Tests() {
   const [activeTest, setActiveTest] = useState('migration')
@@ -19,6 +21,18 @@ export default function Tests() {
       title: 'ICP Integration Test',
       description: 'Test the ICP canister integration and debug connection issues',
       component: <ICPTestPage />
+    },
+    {
+      id: 'privacy-filter',
+      title: 'Privacy Filter Test',
+      description: 'Test the AI privacy detection and message hashing system',
+      component: <PrivacyFilterTest />
+    },
+    {
+      id: 'trading-integration',
+      title: 'OKX DEX Trading Test',
+      description: 'Test Olivia AI trading integration with OKX DEX API',
+      component: <TradingTest />
     }
   ]
 

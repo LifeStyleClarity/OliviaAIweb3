@@ -71,8 +71,8 @@ function App() {
                 </PublicRoute>
               }
             />
+            <Route path="/tests" element={<Tests />} />
             <Route element={<PrivateRoute />}>
-              <Route path="/tests" element={<Tests />} />
               <Route element={<Layout />}>
                 <Route path="/home" element={<Home />} />
               </Route>

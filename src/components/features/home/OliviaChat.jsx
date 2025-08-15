@@ -6,7 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 import ChatInput from '../../ui/ChatInput';
 import ChatMessages from '../../ui/ChatMessages';
 import useAudioWebSocket from '../../../hooks/useAudioWebSocket';
-import { chatService } from '../../../api';
+import { chatService, lurkyService } from '../../../api';
+import FloatingLurkyBubble from '../../ui/FloatingLurkyBubble';
 import { getExtraData, setWebsocketRunning, clearExtraData } from '../../../utils/olivia';
 
 const OliviaChat = ({ onClose }) => {
@@ -31,6 +32,10 @@ const OliviaChat = ({ onClose }) => {
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [imageEnabled, setImageEnabled] = useState(false);
   const [isWarmingUp, setIsWarmingUp] = useState(false);
+  const [lurkyOpen, setLurkyOpen] = useState(false);
+  const [lurkyLoading, setLurkyLoading] = useState(false);
+  const [lurkyContent, setLurkyContent] = useState('');
+  const [lurkyTitle, setLurkyTitle] = useState('Lurky');
 
   // Expose sendChatMessage function to window for use by hooks
   useEffect(() => {
@@ -573,6 +578,41 @@ const OliviaChat = ({ onClose }) => {
     setMessages(updatedMessages);
     updateServerChatHistory(updatedMessages);
 
+    // Detect coin mentions - common crypto coins
+    const coinPatterns = [
+      'bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'cardano', 'ada',
+      'polkadot', 'dot', 'chainlink', 'link', 'litecoin', 'ltc', 'dogecoin', 'doge',
+      'shiba', 'shib', 'avalanche', 'avax', 'polygon', 'matic', 'uniswap', 'uni',
+      'cosmos', 'atom', 'algorand', 'algo', 'tezos', 'xtz', 'stellar', 'xlm',
+      'vechain', 'vet', 'filecoin', 'fil', 'tron', 'trx', 'eos', 'monero', 'xmr',
+      'aave', 'compound', 'comp', 'maker', 'mkr', 'sushi', 'pancakeswap', 'cake',
+      'binance', 'bnb', 'ripple', 'xrp', 'near', 'fantom', 'ftm', 'harmony', 'one'
+    ];
+    
+    const mentionedCoin = coinPatterns.find(coin => 
+      new RegExp(`\\b${coin}\\b`, 'i').test(message)
+    );
+    
+    // Handle Lurky bubble logic
+    if (mentionedCoin) {
+      console.log('🟢 Lurky popup trigger (OliviaChat): matched coin', mentionedCoin);
+      setLurkyOpen(true);
+      setLurkyLoading(true);
+      setLurkyTitle(`${mentionedCoin.toUpperCase()} - Lurky`);
+      (async () => {
+        try {
+          const data = await lurkyService.getCoins(mentionedCoin);
+          const text = typeof data === 'string' ? data : '```json\n' + JSON.stringify(data, null, 2) + '\n```';
+          setLurkyContent(text);
+        } catch (err) {
+          setLurkyContent(`Failed to fetch ${mentionedCoin} data from Lurky.`);
+        } finally {
+          setLurkyLoading(false);
+        }
+      })();
+    }
+    // Keep Lurky bubble visible - building conversation bubble map
+
     try {
       const conversationHistory = messages
         .filter(msg => !msg.isExplanation)
@@ -709,6 +749,13 @@ const OliviaChat = ({ onClose }) => {
           disabled={wsIsStreamingResponse || isStreamingResponse}
         />
       </div>
+      <FloatingLurkyBubble
+        isOpen={lurkyOpen}
+        onClose={() => setLurkyOpen(false)}
+        title={lurkyTitle}
+        content={lurkyContent}
+        loading={lurkyLoading}
+      />
     </div>
   );
 };

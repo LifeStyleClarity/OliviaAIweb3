@@ -8,44 +8,49 @@ export const useInternetIdentity = () => {
   const [principal, setPrincipal] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize auth client
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const client = await AuthClient.create();
-        setAuthClient(client);
-        
-        const isAuth = await client.isAuthenticated();
-        setIsAuthenticated(isAuth);
-        
-        if (isAuth) {
-          const userIdentity = client.getIdentity();
-          const userPrincipal = userIdentity.getPrincipal().toString();
-          setIdentity(userIdentity);
-          setPrincipal(userPrincipal);
-        }
-      } catch (error) {
-        console.error('Failed to initialize Internet Identity:', error);
-      } finally {
-        setIsLoading(false);
+  // Initialize auth client ONLY when login is called - no automatic initialization
+  const initializeAuthClient = async () => {
+    if (authClient) return authClient;
+    
+    try {
+      const client = await AuthClient.create();
+      setAuthClient(client);
+      
+      const isAuth = await client.isAuthenticated();
+      setIsAuthenticated(isAuth);
+      
+      if (isAuth) {
+        const userIdentity = client.getIdentity();
+        const userPrincipal = userIdentity.getPrincipal().toString();
+        setIdentity(userIdentity);
+        setPrincipal(userPrincipal);
       }
-    };
+      
+      return client;
+    } catch (error) {
+      console.error('Failed to initialize Internet Identity:', error);
+      throw error;
+    }
+  };
 
-    initAuth();
+  // Set loading to false on mount since we're not auto-initializing
+  useEffect(() => {
+    setIsLoading(false);
   }, []);
 
   // Login with Internet Identity
   const login = async () => {
-    if (!authClient) return false;
+    console.log('🔐 Internet Identity login requested');
+    const client = await initializeAuthClient();
     
     try {
       setIsLoading(true);
       
-      await authClient.login({
+      await client.login({
         identityProvider: 'https://identity.ic0.app',
         maxTimeToLive: BigInt(7 * 24 * 60 * 60 * 1000 * 1000 * 1000), // 7 days
         onSuccess: () => {
-          const userIdentity = authClient.getIdentity();
+          const userIdentity = client.getIdentity();
           const userPrincipal = userIdentity.getPrincipal().toString();
           
           setIdentity(userIdentity);

@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { TonConnectButton, useTonWallet } from '@tonconnect/ui-react';
 import NotificationButton from '../ui/NotificationButton';
-import AirdropButton from '../ui/AirdropButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import { useWalletAuthFlow } from '../../hooks/useWalletAuthFlow';
@@ -140,7 +139,6 @@ export default function TopNavigation() {
             )}
           </div>
           <div className="flex items-center gap-2 flex-nowrap">
-            {!isGuestUser && <AirdropButton />}
             {!isGuestUser && <NotificationButton />}
           </div>
         </div>

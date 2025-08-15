@@ -12,26 +12,20 @@ import ConditionalChatModal from './components/ui/ConditionalChatModal.jsx'
 import { AuthProviderLogin } from './contexts/AuthContext.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
-import TelegramAnalytics from '@telegram-apps/analytics'
-
-// Only initialize Telegram analytics if running inside Telegram
-if (window.Telegram?.WebApp) {
-  try {
-TelegramAnalytics.init({
-  token: import.meta.env.VITE_TG_ANAL_TOKEN,
-  appName: import.meta.env.VITE_TG_ANAL_APP_NAME,
-});
-  } catch (error) {
-    console.log('Telegram analytics not available in browser environment');
-  }
-}
+// Telegram analytics - disabled in development to prevent errors
+console.log('🌐 Running in browser/development mode - Telegram analytics disabled');
 
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <HeroUIProvider>
       <TonConnectUIProvider manifestUrl="https://app.olivianetwork.com/tonconnect-manifest.json">
-        <BrowserRouter>
+        <BrowserRouter 
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
           <AuthProviderLogin>
             <WebSocketProvider>
             <ChatProvider>

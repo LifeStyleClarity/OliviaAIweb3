@@ -18,7 +18,19 @@ const STORAGE_KEYS = {
 
 export const useAccountUpgrade = () => {
   const { userData, isGuestUser } = useAuth();
-  const { icpUser, icpInitialized } = useWebSocket();
+  
+  // Use WebSocket context safely - it might not be available in all contexts
+  let icpUser = null;
+  let icpInitialized = false;
+  try {
+    const webSocketContext = useWebSocket();
+    icpUser = webSocketContext.icpUser;
+    icpInitialized = webSocketContext.icpInitialized;
+  } catch (error) {
+    // WebSocket context not available - this is fine, continue without ICP features
+    console.log('🔄 WebSocket context not available in useAccountUpgrade, continuing without ICP features');
+  }
+  
   const [shouldShowUpgrade, setShouldShowUpgrade] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
   const [canUpgrade, setCanUpgrade] = useState(false);

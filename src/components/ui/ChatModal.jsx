@@ -5,7 +5,8 @@ import { getExtraData, setWebsocketRunning } from '../../utils/olivia';
 import ChatInput from './ChatInput';
 import ChatMessages from './ChatMessages';
 import useAudioWebSocket from '../../hooks/useAudioWebSocket';
-import { chatService } from '../../api';
+import { chatService, lurkyService } from '../../api';
+import FloatingLurkyBubble from './FloatingLurkyBubble';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import { useAccountUpgrade } from '../../hooks/useAccountUpgrade';
@@ -21,7 +22,7 @@ const ChatModal = () => {
   const chatInputRef = useRef(null);
   const isProcessingRef = useRef(false);
   const { userData, isGuestUser } = useAuth();
-  const { isConnected, isConnecting, sendMessage, currentAction, actionStatus, isStreamingResponse: wsIsStreamingResponse, cancelStreamingResponse, connect, disconnect, wsError, isServerUnavailable, currentEndpointIndex, wsEndpoints } = useWebSocket();
+  const { isConnected, isConnecting, sendMessage, currentAction, actionStatus, isStreamingResponse: wsIsStreamingResponse, cancelStreamingResponse, connect, disconnect, wsError, isServerUnavailable, currentEndpointIndex, wsEndpoints, icpInitialized, initializeICP } = useWebSocket();
   
   // Import upgrade tracking hook
   const { trackMessage } = useAccountUpgrade();
@@ -32,6 +33,10 @@ const ChatModal = () => {
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [imageEnabled, setImageEnabled] = useState(false);
   const [isWarmingUp, setIsWarmingUp] = useState(false); // For first-time connection warming
+  const [lurkyOpen, setLurkyOpen] = useState(false);
+  const [lurkyLoading, setLurkyLoading] = useState(false);
+  const [lurkyContent, setLurkyContent] = useState('');
+  const [lurkyTitle, setLurkyTitle] = useState('Lurky');
 
   // Function to update chat history on the server
   const updateServerChatHistory = useCallback(async (updatedMessages) => {
@@ -97,7 +102,7 @@ const ChatModal = () => {
 
 
 
-  // Connect WebSocket when modal opens, disconnect when it closes
+  // Connect WebSocket and Initialize ICP when modal opens
   useEffect(() => {
     let timeoutId;
     
@@ -118,6 +123,24 @@ const ChatModal = () => {
       }
     };
   }, [isOpen, isConnected, isConnecting, connect, disconnect]);
+
+  // Initialize ICP when chat modal opens
+  useEffect(() => {
+    console.log('🟦 ChatModal useEffect - ICP initialization check:', { 
+      isOpen, 
+      icpInitialized, 
+      hasInitializeICP: !!initializeICP 
+    });
+    
+    if (isOpen && !icpInitialized) {
+      console.log('🟦 Chat opened - initializing ICP for message storage');
+      if (initializeICP) {
+        initializeICP();
+      } else {
+        console.error('🟦 initializeICP function not available!');
+      }
+    }
+  }, [isOpen, icpInitialized, initializeICP]);
 
   // Handle warming up state when chat is first opened
   useEffect(() => {
@@ -613,6 +636,41 @@ const ChatModal = () => {
     // Update server chat history
     updateServerChatHistory(updatedMessages);
 
+    // Detect coin mentions - common crypto coins
+    const coinPatterns = [
+      'bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'cardano', 'ada',
+      'polkadot', 'dot', 'chainlink', 'link', 'litecoin', 'ltc', 'dogecoin', 'doge',
+      'shiba', 'shib', 'avalanche', 'avax', 'polygon', 'matic', 'uniswap', 'uni',
+      'cosmos', 'atom', 'algorand', 'algo', 'tezos', 'xtz', 'stellar', 'xlm',
+      'vechain', 'vet', 'filecoin', 'fil', 'tron', 'trx', 'eos', 'monero', 'xmr',
+      'aave', 'compound', 'comp', 'maker', 'mkr', 'sushi', 'pancakeswap', 'cake',
+      'binance', 'bnb', 'ripple', 'xrp', 'near', 'fantom', 'ftm', 'harmony', 'one'
+    ];
+    
+    const mentionedCoin = coinPatterns.find(coin => 
+      new RegExp(`\\b${coin}\\b`, 'i').test(message)
+    );
+    
+    // Handle Lurky bubble logic
+    if (mentionedCoin) {
+      console.log('🔎 Lurky popup trigger (ChatModal): matched coin', mentionedCoin);
+      setLurkyOpen(true);
+      setLurkyLoading(true);
+      setLurkyTitle(`${mentionedCoin.toUpperCase()} - Lurky`);
+      (async () => {
+        try {
+          const data = await lurkyService.getCoins(mentionedCoin);
+          const text = typeof data === 'string' ? data : '```json\n' + JSON.stringify(data, null, 2) + '\n```';
+          setLurkyContent(text);
+        } catch (err) {
+          setLurkyContent(`Failed to fetch ${mentionedCoin} data from Lurky.`);
+        } finally {
+          setLurkyLoading(false);
+        }
+      })();
+    }
+    // Keep Lurky bubble visible - building conversation bubble map
+
     // Send message through WebSocket using the streaming hook format
     try {
       // Get conversation history (excluding explanation messages)
@@ -819,6 +877,13 @@ const ChatModal = () => {
           />
         </ModalFooter>
       </ModalContent>
+      <FloatingLurkyBubble
+        isOpen={lurkyOpen}
+        onClose={() => setLurkyOpen(false)}
+        title={lurkyTitle}
+        content={lurkyContent}
+        loading={lurkyLoading}
+      />
     </Modal>
   );
 };

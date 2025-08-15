@@ -67,12 +67,12 @@ export default function Layout() {
   }, [userData, telegramUser, isGuestUser])
 
   return (
-    <div className={`h-screen hide-scrollbar w-full flex flex-col relative pb-[65px]`}>
+    <div className={`h-screen hide-scrollbar w-full flex flex-col relative overflow-hidden`}>
       {/* Top Navigation */}
       <TopNavigation />
 
       {/* Main content */}
-      <main className={`flex-1 px-4`}>
+      <main className={`flex-1 px-4 overflow-hidden`}>
         <Outlet />
       </main>
 

@@ -83,9 +83,19 @@ const createAgent = async (identity = null) => {
       
       const newAgent = new HttpAgent(agentOptions);
       
-      // In development, fetch the root key
+      // In development, fetch the root key (with timeout to prevent hanging)
       if (import.meta.env.DEV) {
-        await newAgent.fetchRootKey();
+        const rootKeyPromise = newAgent.fetchRootKey();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Root key fetch timeout')), 2000);
+        });
+        
+        try {
+          await Promise.race([rootKeyPromise, timeoutPromise]);
+        } catch (error) {
+          // Silently fail in development if root key fetch times out
+          throw new Error('ICP network not available (development mode)');
+        }
       }
       
       // Update the global agent reference
@@ -142,16 +152,24 @@ export const icpService = {
 
   // Test connection
   async testConnection() {
+    // Skip ICP connection in development mode if no local network is running
+    if (import.meta.env.DEV) {
+      try {
+        const actorInstance = await createActor(this._currentIdentity);
+        const result = await actorInstance.greet('Frontend');
+        return { success: true, message: result };
+      } catch (error) {
+        console.warn('🟦 ICP connection test failed (development mode - this is normal):', error.message);
+        return { success: false, error: error.message, skipRetry: true };
+      }
+    }
+    
     try {
       const actorInstance = await createActor(this._currentIdentity);
       const result = await actorInstance.greet('Frontend');
       return { success: true, message: result };
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.warn('🟦 ICP connection test failed (development mode):', error.message);
-      } else {
-        console.error('ICP connection test failed:', error);
-      }
+      console.error('ICP connection test failed:', error);
       return { success: false, error: error.message };
     }
   },
@@ -208,7 +226,10 @@ export const icpService = {
   // Chat storage
   async saveMessage(messageId, userMessage, aiResponse, conversationId, searchEnabled = false, imageEnabled = false) {
     try {
-      const actorInstance = await createActor();
+      console.log('🟦 ICP Service: saveMessage called', { messageId, conversationId, hasIdentity: !!this._currentIdentity });
+      
+      // Use the current identity for authentication
+      const actorInstance = await createActor(this._currentIdentity);
       const result = await actorInstance.saveMessage(
         messageId,
         userMessage,
@@ -218,13 +239,15 @@ export const icpService = {
         imageEnabled
       );
       
+      console.log('🟦 ICP Service: saveMessage canister response', result);
+      
       if ('ok' in result) {
         return { success: true, message: result.ok };
       } else {
         return { success: false, error: result.err };
       }
     } catch (error) {
-      console.error('Save message failed:', error);
+      console.error('🟦 ICP Service: Save message failed:', error);
       return { success: false, error: error.message };
     }
   },
