@@ -21,7 +21,7 @@ const FloatingCoinGeckoBubble = ({ isOpen, onClose, title = 'CoinGecko', content
 
     const interval = setInterval(() => {
       setPosition(prev => {
-        const bubbleSize = isExpanded ? 200 : 128;
+        const bubbleSize = isExpanded ? 350 : 128; // Much bigger to fit market data
         const margin = 20;
         
         // Simple upward floating - no hard stops
@@ -88,7 +88,7 @@ const FloatingCoinGeckoBubble = ({ isOpen, onClose, title = 'CoinGecko', content
   const createPopEffect = () => {
     if (!addParticlesToSwarm) return;
     
-    const bubbleSize = isExpanded ? 200 : 128;
+    const bubbleSize = isExpanded ? 350 : 128; // Much bigger to fit market data
     const bubbleCenter = {
       x: position.x + bubbleSize / 2, // Actual bubble center
       y: position.y + bubbleSize / 2  // Actual bubble center
@@ -118,19 +118,7 @@ const FloatingCoinGeckoBubble = ({ isOpen, onClose, title = 'CoinGecko', content
   };
 
   const handleMouseDown = (e) => {
-    // Don't start dragging if clicking on close button
     if (e.target.getAttribute('aria-label') === 'Close') return;
-    
-    // Check for double-click
-    const currentTime = Date.now();
-    if (currentTime - lastClickTime < 300) {
-      createPopEffect();
-      return;
-    }
-    setLastClickTime(currentTime);
-    
-    // Expand bubble on mouse down
-    setIsExpanded(true);
     
     setIsDragging(true);
     const rect = e.currentTarget.getBoundingClientRect();
@@ -140,7 +128,21 @@ const FloatingCoinGeckoBubble = ({ isOpen, onClose, title = 'CoinGecko', content
     });
   };
 
-  // Remove click handler - using mouse down/up instead
+  const handleClick = (e) => {
+    // Don't toggle if clicking close button
+    if (e.target.getAttribute('aria-label') === 'Close') return;
+    
+    // Check for double-click to pop
+    const currentTime = Date.now();
+    if (currentTime - lastClickTime < 300) {
+      createPopEffect();
+      return;
+    }
+    setLastClickTime(currentTime);
+    
+    // Toggle expanded state
+    setIsExpanded(prev => !prev);
+  };
 
   const handleMouseMove = (e) => {
     if (!isDragging) return;
@@ -155,9 +157,6 @@ const FloatingCoinGeckoBubble = ({ isOpen, onClose, title = 'CoinGecko', content
   };
 
   const handleMouseUp = () => {
-    // Collapse bubble on mouse up
-    setIsExpanded(false);
-    
     if (isDragging) {
       setIsDragging(false);
       // Bubble will resume upward floating automatically
@@ -177,7 +176,7 @@ const FloatingCoinGeckoBubble = ({ isOpen, onClose, title = 'CoinGecko', content
 
   if (!isOpen) return null;
   
-  const bubbleSize = isExpanded ? 200 : 128;
+  const bubbleSize = isExpanded ? 350 : 128; // Much bigger to fit market data
   const bubbleWidth = bubbleSize;
   const bubbleHeight = bubbleSize;
   
@@ -193,6 +192,7 @@ const FloatingCoinGeckoBubble = ({ isOpen, onClose, title = 'CoinGecko', content
         willChange: isDragging ? 'transform' : 'auto'
       }}
       onMouseDown={handleMouseDown}
+      onClick={handleClick}
       data-bubble="coingecko"
       data-bubble-id={bubbleId}
     >

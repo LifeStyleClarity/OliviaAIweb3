@@ -152,6 +152,14 @@ const FloatingCoinStatsBubble = ({ isOpen, onClose, title = 'CoinStats', content
     // Don't toggle if clicking close button
     if (e.target.getAttribute('aria-label') === 'Close') return;
     
+    // Check for double-click to pop
+    const currentTime = Date.now();
+    if (currentTime - lastClickTime < 300) {
+      createPopEffect();
+      return;
+    }
+    setLastClickTime(currentTime);
+    
     // Toggle expanded state
     setIsExpanded(prev => !prev);
   };

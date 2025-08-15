@@ -318,17 +318,19 @@ export default function Home() {
     setIsLoading(true)
     setCurrentResponse('')
 
-    // Handle Lurky bubble logic (coin mentions)
+    // Handle Lurky bubble logic (coin mentions) - only one at a time
     if (mentionedCoin) {
-      // Create new Lurky bubble instance
-      const newBubble = {
-        id: Date.now() + Math.random(), // Unique ID
-        title: `${mentionedCoin.toUpperCase()} - Lurky`,
-        content: 'Loading coin data...',
-        loading: true
-      }
-      
-      setLurkyBubbles(prev => [...prev, newBubble])
+      // Only create Lurky bubble if none exists
+      if (lurkyBubbles.length === 0) {
+        // Create new Lurky bubble instance
+        const newBubble = {
+          id: Date.now() + Math.random(), // Unique ID
+          title: `${mentionedCoin.toUpperCase()} - Lurky`,
+          content: 'Loading coin data...',
+          loading: true
+        }
+        
+        setLurkyBubbles(prev => [...prev, newBubble])
       
       // Then try to fetch data
       ;(async () => {
@@ -491,16 +493,90 @@ export default function Home() {
           ))
         }
       })()
+      }
     }
     // Keep Lurky bubble visible - building conversation bubble map
 
-    // Handle CoinGecko bubble logic (price mentions)
-    if (mentionsPrice) {
-      // Create new CoinGecko bubble instance
+    // Handle CoinGecko bubble logic (price mentions + specific coin)
+    if (mentionsPrice && mentionedCoin) {
+      // Create new CoinGecko bubble instance for specific coin
+      const coinName = mentionedCoin.charAt(0).toUpperCase() + mentionedCoin.slice(1);
       const newBubble = {
         id: Date.now() + Math.random(), // Unique ID
-        title: 'Live Prices - CoinGecko',
-        content: 'Loading price data...',
+        title: `${coinName} Market Data - CoinGecko`,
+        content: `Loading ${coinName} market data...`,
+        loading: true
+      }
+      
+      setCoinGeckoBubbles(prev => [...prev, newBubble])
+      ;(async () => {
+        try {
+          // Get detailed coin data for the specific coin
+          const data = await coingeckoService.getCoinDetails(mentionedCoin.toLowerCase())
+          
+          let marketText = `${data.name} (${data.symbol.toUpperCase()}) Market Stats\n\n`
+          
+          const marketData = data.market_data
+          if (marketData) {
+            // Price and 24h change
+            const price = marketData.current_price?.usd || 0
+            const change24h = marketData.price_change_percentage_24h || 0
+            const changeDirection = change24h > 0 ? '+' : ''
+            
+            marketText += `Price: $${price.toLocaleString()}\n`
+            marketText += `24h Change: ${changeDirection}${change24h.toFixed(2)}%\n\n`
+            
+            // Market stats
+            const marketCap = marketData.market_cap?.usd
+            const volume = marketData.total_volume?.usd
+            const circulatingSupply = marketData.circulating_supply
+            const maxSupply = marketData.max_supply
+            
+            if (marketCap) {
+              marketText += `Market Cap: $${(marketCap/1e9).toFixed(2)}B\n`
+            }
+            if (volume) {
+              marketText += `24h Volume: $${(volume/1e9).toFixed(2)}B\n`
+            }
+            if (circulatingSupply) {
+              marketText += `Circulating: ${(circulatingSupply/1e6).toFixed(1)}M\n`
+            }
+            if (maxSupply) {
+              marketText += `Max Supply: ${(maxSupply/1e6).toFixed(1)}M\n`
+            } else {
+              marketText += `Max Supply: Unlimited\n`
+            }
+            
+            // Market rank
+            if (data.market_cap_rank) {
+              marketText += `\nRank: #${data.market_cap_rank}`
+            }
+          } else {
+            marketText += 'Market data not available'
+          }
+          
+          // Update the specific bubble
+          setCoinGeckoBubbles(prev => prev.map(bubble => 
+            bubble.id === newBubble.id 
+              ? { ...bubble, content: marketText, loading: false }
+              : bubble
+          ))
+        } catch (e) {
+          console.error('CoinGecko detailed data error:', e)
+          // Update the specific bubble with error
+          setCoinGeckoBubbles(prev => prev.map(bubble => 
+            bubble.id === newBubble.id 
+              ? { ...bubble, content: `${coinName} not found on CoinGecko\n\nTry:\n• "bitcoin price"\n• "ethereum market cap"\n• "solana volume"`, loading: false }
+              : bubble
+          ))
+        }
+      })()
+    } else if (mentionsPrice) {
+      // Fallback: show general market overview if no specific coin mentioned
+      const newBubble = {
+        id: Date.now() + Math.random(),
+        title: 'Market Overview - CoinGecko', 
+        content: 'Loading market overview...',
         loading: true
       }
       
@@ -508,7 +584,7 @@ export default function Home() {
       ;(async () => {
         try {
           const data = await coingeckoService.getPrices(['bitcoin', 'ethereum', 'solana'])
-          let priceText = ''
+          let priceText = 'Top 3 Cryptos:\n\n'
           Object.entries(data).forEach(([coin, info]) => {
             const change = info.usd_24h_change || 0
             const changeDirection = change > 0 ? '+' : ''
@@ -518,19 +594,19 @@ export default function Home() {
             const symbol = coin === 'bitcoin' ? 'BTC' : 
                           coin === 'ethereum' ? 'ETH' : 
                           coin === 'solana' ? 'SOL' : coin.slice(0,3).toUpperCase()
-            priceText += `${symbol} $${price}\n${changeDirection}${change.toFixed(1)}%\n`
+            priceText += `${symbol}: $${price} (${changeDirection}${change.toFixed(1)}%)\n`
           })
-          // Update the specific bubble
+          priceText += '\nAsk about specific coins for detailed stats!'
+          
           setCoinGeckoBubbles(prev => prev.map(bubble => 
             bubble.id === newBubble.id 
               ? { ...bubble, content: priceText, loading: false }
               : bubble
           ))
         } catch (e) {
-          // Update the specific bubble with error
           setCoinGeckoBubbles(prev => prev.map(bubble => 
             bubble.id === newBubble.id 
-              ? { ...bubble, content: 'Failed to fetch price data from CoinGecko.', loading: false }
+              ? { ...bubble, content: 'Failed to fetch market overview from CoinGecko.', loading: false }
               : bubble
           ))
         }
@@ -906,8 +982,14 @@ export default function Home() {
                     style={{
                       opacity: fadeOpacity
                     }}
+                    dangerouslySetInnerHTML={{
+                      __html: msg.content
+                        // Convert markdown links [text](url) to HTML links
+                        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: #31F46E; text-decoration: underline;">$1</a>')
+                        // Convert plain URLs to clickable links  
+                        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #31F46E; text-decoration: underline;">$1</a>')
+                    }}
                   >
-                    {msg.content}
                   </div>
                 );
               }).filter(Boolean)}
