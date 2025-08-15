@@ -121,16 +121,6 @@ const FloatingCoinStatsBubble = ({ isOpen, onClose, title = 'CoinStats', content
   const handleMouseDown = (e) => {
     if (e.target.getAttribute('aria-label') === 'Close') return;
     
-    // Check for double-click
-    const currentTime = Date.now();
-    if (currentTime - lastClickTime < 300) {
-      createPopEffect();
-      return;
-    }
-    setLastClickTime(currentTime);
-    
-
-    
     setIsDragging(true);
     const rect = e.currentTarget.getBoundingClientRect();
     setDragOffset({
@@ -195,6 +185,7 @@ const FloatingCoinStatsBubble = ({ isOpen, onClose, title = 'CoinStats', content
         willChange: isDragging ? 'transform' : 'auto'
       }}
       onMouseDown={handleMouseDown}
+      onClick={handleClick}
       data-bubble="coinstats"
       data-bubble-id={bubbleId}
     >

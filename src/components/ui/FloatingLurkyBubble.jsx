@@ -22,7 +22,7 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
 
     const interval = setInterval(() => {
       setPosition(prev => {
-        const bubbleSize = isExpanded ? 200 : 128;
+        const bubbleSize = isExpanded ? 400 : 128; // Even bigger when expanded to fit all Lurky social data
         const margin = 20;
         
         // Simple upward floating - no hard stops
@@ -30,7 +30,7 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
         let newX = prev.x;
         
         // Always try to float up (like a balloon)
-        const floatForce = -0.5; // Gentle upward force
+        const floatForce = -0.9; // Gentle upward force
         newY += floatForce;
         
         // Stop at top of screen naturally
@@ -89,7 +89,7 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
   const createPopEffect = () => {
     if (!addParticlesToSwarm) return;
     
-    const bubbleSize = isExpanded ? 200 : 128;
+    const bubbleSize = isExpanded ? 400 : 128; // Even bigger when expanded
     const bubbleCenter = {
       x: position.x + bubbleSize / 2, // Actual bubble center
       y: position.y + bubbleSize / 2  // Actual bubble center
@@ -122,17 +122,6 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
   const handleMouseDown = (e) => {
     if (e.target.getAttribute('aria-label') === 'Close') return;
     
-    // Check for double-click
-    const currentTime = Date.now();
-    if (currentTime - lastClickTime < 300) { // 300ms double-click threshold
-      createPopEffect();
-      return;
-    }
-    setLastClickTime(currentTime);
-    
-    // Expand bubble on mouse down
-    setIsExpanded(true);
-    
     setIsDragging(true);
     const rect = e.currentTarget.getBoundingClientRect();
     setDragOffset({
@@ -141,6 +130,21 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
     });
   };
 
+  const handleClick = (e) => {
+    // Don't toggle if clicking close button
+    if (e.target.getAttribute('aria-label') === 'Close') return;
+    
+    // Check for double-click to pop
+    const currentTime = Date.now();
+    if (currentTime - lastClickTime < 300) {
+      createPopEffect();
+      return;
+    }
+    setLastClickTime(currentTime);
+    
+    // Toggle expanded state
+    setIsExpanded(prev => !prev);
+  };
 
 
   const handleMouseMove = (e) => {
@@ -156,9 +160,6 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
   };
 
   const handleMouseUp = () => {
-    // Collapse bubble on mouse up
-    setIsExpanded(false);
-    
     if (isDragging) {
       setIsDragging(false);
       // Bubble will resume upward floating automatically
@@ -178,7 +179,7 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
 
   if (!isOpen) return null;
   
-  const bubbleSize = isExpanded ? 200 : 128;
+  const bubbleSize = isExpanded ? 400 : 128; // Even bigger when expanded for all Lurky data
   const bubbleWidth = bubbleSize;
   const bubbleHeight = bubbleSize;
   
@@ -194,6 +195,7 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
         willChange: isDragging ? 'transform' : 'auto'
       }}
       onMouseDown={handleMouseDown}
+      onClick={handleClick}
       data-bubble="lurky"
       data-bubble-id={bubbleId}
     >
@@ -222,7 +224,7 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
         </button>
         
         {/* Content area */}
-        <div className="flex-1 p-2 pt-8 overflow-hidden flex items-center justify-center relative z-10">
+        <div className={`flex-1 p-2 pt-8 ${isExpanded ? 'overflow-y-auto' : 'overflow-hidden'} flex items-center justify-center relative z-10`}>
           {loading ? (
             <div className={`${isExpanded ? 'text-sm' : 'text-[8px]'} text-white font-medium animate-pulse text-center`}>
               <div className="flex items-center gap-1 justify-center">
@@ -233,17 +235,17 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
               <div className="mt-1">Loading</div>
             </div>
           ) : (
-            <div className={`text-white ${isExpanded ? 'text-sm' : 'text-[8px]'} leading-tight break-words w-full h-full overflow-hidden text-center flex items-center justify-center`}>
+            <div className={`text-white ${isExpanded ? 'text-xs' : 'text-[8px]'} leading-tight break-words w-full h-full overflow-hidden text-center flex items-center justify-center`}>
               {typeof content === 'string' ? (
                 <div className="max-h-full overflow-hidden">
                   <ReactMarkdown 
-                    className={`prose prose-invert max-w-none prose-p:text-white ${isExpanded ? 'prose-p:text-sm' : 'prose-p:text-[8px]'} prose-p:leading-tight prose-p:my-0.5 ${isExpanded ? 'prose-pre:text-xs' : 'prose-pre:text-[7px]'} prose-pre:bg-black/20 prose-pre:p-1 prose-pre:rounded prose-pre:leading-tight prose-pre:text-white prose-pre:border prose-pre:border-green-400/30`}
+                    className={`prose prose-invert max-w-none prose-p:text-white ${isExpanded ? 'prose-p:text-xs' : 'prose-p:text-[8px]'} prose-p:leading-tight prose-p:my-0.5 ${isExpanded ? 'prose-pre:text-xs' : 'prose-pre:text-[7px]'} prose-pre:bg-black/20 prose-pre:p-1 prose-pre:rounded prose-pre:leading-tight prose-pre:text-white prose-pre:border prose-pre:border-green-400/30`}
                   >
                     {content}
                   </ReactMarkdown>
                 </div>
               ) : (
-                <div className={`text-white ${isExpanded ? 'text-sm' : 'text-[8px]'} break-words leading-tight font-mono max-h-full overflow-hidden`}>
+                <div className={`text-white ${isExpanded ? 'text-xs' : 'text-[8px]'} break-words leading-tight font-mono max-h-full overflow-hidden`}>
                   {JSON.stringify(content, null, 1)}
                 </div>
               )}

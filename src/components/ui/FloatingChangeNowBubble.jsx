@@ -21,7 +21,7 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
 
     const interval = setInterval(() => {
       setPosition(prev => {
-        const bubbleSize = isExpanded ? 280 : 128; // Match expanded size
+        const bubbleSize = isExpanded ? 350 : 180; // Bigger to fit ChangeNOW content
         const margin = 20;
         
         // Simple upward floating 
@@ -82,7 +82,7 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
   const createPopEffect = () => {
     if (!addParticlesToSwarm) return;
     
-    const bubbleSize = isExpanded ? 280 : 128;
+    const bubbleSize = isExpanded ? 350 : 180;
     const bubbleCenter = {
       x: position.x + bubbleSize / 2, // Actual bubble center
       y: position.y + bubbleSize / 2  // Actual bubble center
@@ -173,7 +173,7 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
 
   if (!isOpen) return null;
 
-  const bubbleSize = isExpanded ? 280 : 128; // Match Hedera bubble size
+  const bubbleSize = isExpanded ? 350 : 180; // Bigger to fit ChangeNOW content
 
   const bubble = (
     <div
@@ -213,9 +213,9 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
         </button>
         
         {/* Content area */}
-        <div className="flex-1 p-1 pt-8 overflow-auto flex flex-col items-center justify-center relative z-10">
+        <div className={`flex-1 ${isExpanded ? 'p-1 pt-8' : 'p-0.5 pt-6'} overflow-hidden flex flex-col items-center justify-center relative z-10`}>
           {loading ? (
-            <div className={`${isExpanded ? 'text-sm' : 'text-[6px]'} text-white font-medium animate-pulse text-center`}>
+            <div className={`${isExpanded ? 'text-sm' : 'text-[8px]'} text-white font-medium animate-pulse text-center`}>
               <div className="flex items-center gap-0.5 justify-center">
                 <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`}></div>
                 <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`} style={{animationDelay: '0.1s'}}></div>
@@ -224,25 +224,35 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
               <div className="mt-0.5">Loading</div>
             </div>
           ) : (
-            <>
-              <div className={`text-white ${isExpanded ? 'text-xs' : 'text-[6px]'} ${isExpanded ? 'leading-tight' : 'leading-[1]'} break-words w-full text-center flex-grow flex items-start justify-center ${isExpanded ? 'pt-2' : ''}`}>
-                <div className={`${isExpanded ? 'max-h-full overflow-y-auto px-2' : 'max-h-full overflow-hidden'} whitespace-pre-wrap font-mono ${isExpanded ? 'font-medium' : 'font-bold'} ${isExpanded ? 'text-center' : ''}`}>
+            <div className="w-full h-full flex flex-col">
+              <div className={`text-white ${isExpanded ? 'text-xs' : 'text-[8px]'} leading-[1] break-words w-full h-full flex items-center justify-center`}>
+                <div className={`overflow-hidden ${isExpanded ? 'px-2' : ''} whitespace-pre-wrap font-mono font-bold text-center max-h-full w-full`}>
                   {content}
                 </div>
               </div>
               {/* Swap button - only show when expanded */}
               {isExpanded && content.includes('changenow.io') && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.open('https://changenow.io', '_blank');
-                  }}
-                  className="mt-2 px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded-full transition-colors duration-200 shadow-lg"
-                >
-                  🔗 Visit ChangeNOW
-                </button>
+                <div className="mt-2 flex justify-center">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Extract the trading pair from content to build direct URL
+                      const swapMatch = content.match(/Swap: (\w+) → (\w+)/);
+                      if (swapMatch) {
+                        const fromToken = swapMatch[1].toUpperCase();
+                        const toToken = swapMatch[2].toUpperCase();
+                        window.open(`https://changenow.io/exchange?from=${fromToken}&to=${toToken}&amount=1`, '_blank');
+                      } else {
+                        window.open('https://changenow.io', '_blank');
+                      }
+                    }}
+                    className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded-full transition-colors duration-200 shadow-lg"
+                  >
+                    Exchange Now
+                  </button>
+                </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
