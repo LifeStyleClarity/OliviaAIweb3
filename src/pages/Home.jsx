@@ -278,20 +278,19 @@ export default function Home() {
 
     const message = userInput.trim()
     
-    // Detect coin mentions - common crypto coins
-    const coinPatterns = [
-      'bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'cardano', 'ada',
-      'polkadot', 'dot', 'chainlink', 'link', 'litecoin', 'ltc', 'dogecoin', 'doge',
-      'shiba', 'shib', 'avalanche', 'avax', 'polygon', 'matic', 'uniswap', 'uni',
-      'cosmos', 'atom', 'algorand', 'algo', 'tezos', 'xtz', 'stellar', 'xlm',
-      'vechain', 'vet', 'filecoin', 'fil', 'tron', 'trx', 'eos', 'monero', 'xmr',
-      'aave', 'compound', 'comp', 'maker', 'mkr', 'sushi', 'pancakeswap', 'cake',
-      'binance', 'bnb', 'ripple', 'xrp', 'near', 'fantom', 'ftm', 'harmony', 'one'
-    ]
+    // Extract potential token names from the message
+    // Look for words that could be tokens (3+ chars, not common words)
+    const words = message.toLowerCase().match(/\b[a-zA-Z]{2,}\b/g) || [];
+    const commonWords = ['the', 'and', 'for', 'with', 'what', 'how', 'why', 'when', 'where', 'this', 'that', 'are', 'you', 'can', 'get', 'buy', 'sell', 'trade', 'swap', 'exchange', 'price', 'coin', 'token', 'crypto', 'cryptocurrency'];
     
-    const mentionedCoin = coinPatterns.find(coin => 
-      new RegExp(`\\b${coin}\\b`, 'i').test(message)
-    )
+    const potentialTokens = words.filter(word => 
+      word.length >= 3 && 
+      !commonWords.includes(word) &&
+      !/^\d+$/.test(word) // Not just numbers
+    );
+    
+    // Use the first potential token found
+    const mentionedCoin = potentialTokens[0];
     
     // Detect price queries
     const mentionsPrice = /\b(price|prices|cost|value|worth|usd|dollar)\b/i.test(message)
@@ -329,12 +328,22 @@ export default function Home() {
         try {
           const data = await lurkyService.getCoins(mentionedCoin)
           
+          // Debug log to see what we actually get
+          console.log('Lurky API Response:', data);
+          console.log('Lurky API Response type:', typeof data);
+          console.log('Lurky API Response keys:', data ? Object.keys(data) : 'no keys');
+          
           let lurkyText = '';
           
-          if (data.message) {
+          // Convert data to string if it's showing as [object Object]
+          if (data && typeof data === 'object' && data.toString() === '[object Object]') {
+            lurkyText = `📊 Lurky API Debug:\n\nType: ${typeof data}\nKeys: ${Object.keys(data).join(', ')}\n\nRaw data:\n${JSON.stringify(data, null, 2)}`;
+          } else if (!data || typeof data !== 'object') {
+            lurkyText = `❌ Invalid response from Lurky API\n\nReceived: ${typeof data}\nData: ${String(data)}`;
+          } else if (data.message) {
             // Handle API errors/messages
             lurkyText = `⚠️ ${data.message}\n\n${data.suggestion || ''}`;
-          } else if (data.coins && data.coins.length > 0) {
+          } else if (data.coins && Array.isArray(data.coins) && data.coins.length > 0) {
             const coin = data.coins[0];
             
             lurkyText = `📊 ${coin.name || coin.symbol} Social Data\n\n`;
@@ -370,18 +379,38 @@ export default function Home() {
             
           } else if (data.filtered_for) {
             lurkyText = `🔍 No data found for "${data.filtered_for}"\n\nTry popular coins like:\n• Bitcoin\n• Ethereum\n• Solana\n• Dogecoin`;
-          } else {
+          } else if (data.coins && Array.isArray(data.coins) && data.coins.length === 0) {
+            lurkyText = `📊 No coin data available\n\nThe Lurky API returned an empty list.\nTry asking about:\n• Bitcoin\n• Ethereum\n• Popular trending coins`;
+          } else if (data.coins && Array.isArray(data.coins) && data.coins.length > 0) {
             lurkyText = `📊 Top Social Mentions:\n\n`;
-            if (data.coins && data.coins.slice) {
-              data.coins.slice(0, 5).forEach((coin, index) => {
-                const emoji = coin.sentiment === 'bullish' ? '🟢' : coin.sentiment === 'bearish' ? '🔴' : '🟡';
-                lurkyText += `${index + 1}. ${emoji} ${coin.symbol || coin.name}\n`;
-              });
-              lurkyText += `\n📱 Powered by Lurky`;
-            } else {
-              lurkyText = 'Raw data:\n```json\n' + JSON.stringify(data, null, 2) + '\n```';
+            data.coins.slice(0, 5).forEach((coin, index) => {
+              const emoji = coin.sentiment === 'bullish' ? '🟢' : coin.sentiment === 'bearish' ? '🔴' : '🟡';
+              const name = coin.name || coin.symbol || `Coin ${index + 1}`;
+              lurkyText += `${index + 1}. ${emoji} ${name}`;
+              if (coin.mentions) lurkyText += ` (${coin.mentions} mentions)`;
+              lurkyText += `\n`;
+            });
+            lurkyText += `\n📱 Powered by Lurky`;
+          } else {
+              // Show raw data in readable format
+              lurkyText = `📊 Lurky API Response:\n\n`;
+              
+              if (typeof data === 'string') {
+                lurkyText += data;
+              } else {
+                // Try to extract any useful information from the response
+                Object.keys(data).forEach(key => {
+                  const value = data[key];
+                  if (value !== null && value !== undefined) {
+                    if (typeof value === 'object') {
+                      lurkyText += `${key}: ${JSON.stringify(value, null, 1)}\n\n`;
+                    } else {
+                      lurkyText += `${key}: ${value}\n`;
+                    }
+                  }
+                });
+              }
             }
-          }
           
           // Update the specific bubble
           setLurkyBubbles(prev => prev.map(bubble => 
@@ -474,24 +503,24 @@ export default function Home() {
         }
       }
       
-      // If context patterns didn't work, look for known tokens
-      if (!detectedToken) {
-        const knownTokens = [
-          'bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'cardano', 'ada',
-          'polkadot', 'dot', 'chainlink', 'link', 'polygon', 'matic', 'avalanche', 'avax',
-          'dogecoin', 'doge', 'shiba', 'shib', 'ripple', 'xrp', 'binance', 'bnb',
-          'tron', 'trx', 'uniswap', 'uni', 'cosmos', 'atom', 'near', 'algorand', 'algo',
-          'fantom', 'ftm', 'terra', 'luna', 'aave', 'compound', 'comp'
-        ];
+      // If context patterns didn't work, use our dynamic token detection
+      if (!detectedToken && potentialTokens.length > 0) {
+        // Prioritize tokens that appear after action words like "price", "buy", etc.
+        const actionWords = ['price', 'buy', 'sell', 'trade', 'swap', 'exchange', 'get', 'check'];
         
-        // Find ALL mentioned tokens, then pick the most relevant one
-        const foundTokens = knownTokens.filter(token => 
-          new RegExp(`\\b${token}\\b`, 'i').test(message)
-        );
+        for (let i = 0; i < words.length; i++) {
+          if (actionWords.includes(words[i]) && i + 1 < words.length) {
+            const nextWord = words[i + 1];
+            if (potentialTokens.includes(nextWord)) {
+              detectedToken = nextWord;
+              break;
+            }
+          }
+        }
         
-        if (foundTokens.length > 0) {
-          // If multiple tokens found, prefer the last one mentioned (usually the target)
-          detectedToken = foundTokens[foundTokens.length - 1];
+        // If no token found after action words, use the first potential token
+        if (!detectedToken) {
+          detectedToken = potentialTokens[0];
         }
       }
       
@@ -635,8 +664,8 @@ export default function Home() {
       setChangeNowBubbles(prev => [...prev, newBubble])
       ;(async () => {
         try {
-          // Get comprehensive exchange info for the token
-          const exchangeInfo = await changeNowService.getExchangeInfo(mentionedCoin, 'usdt', 1);
+          // For "buy [token]" - user wants to buy the token with USDT (USDT -> Token)
+          const exchangeInfo = await changeNowService.getExchangeInfo('usdt', mentionedCoin, 1);
           
           let exchangeText = '';
           
@@ -644,7 +673,7 @@ export default function Home() {
             const fromToken = exchangeInfo.fromCurrency;
             const toToken = exchangeInfo.toCurrency;
             
-            exchangeText = `🔄 ${fromToken.name} (${fromToken.ticker.toUpperCase()}) → USDT\n\n`;
+            exchangeText = `🔄 Buy ${toToken.name} (${toToken.ticker.toUpperCase()}) with USDT\n\n`;
             
             // Minimum exchange amount
             if (exchangeInfo.minAmount) {
@@ -660,7 +689,7 @@ export default function Home() {
             // Exchange rate and fees
             if (exchangeInfo.exchangeAmount) {
               const rate = exchangeInfo.exchangeAmount;
-              exchangeText += `💱 Rate: 1 ${fromToken.ticker.toUpperCase()} = ${rate.estimatedAmount} USDT\n`;
+              exchangeText += `💱 Rate: 1 ${fromToken.ticker.toUpperCase()} = ${rate.estimatedAmount} ${toToken.ticker.toUpperCase()}\n`;
             }
             
             // Market info (fees and processing time)
@@ -676,7 +705,8 @@ export default function Home() {
             
             exchangeText += `\n⏱️ Processing: ~5-30 minutes\n`;
             exchangeText += `🌐 Cross-chain swaps available\n\n`;
-            exchangeText += `🔗 Ready to swap? Visit:\nchangenow.io/exchange/${fromToken.ticker.toLowerCase()}_${toToken.ticker.toLowerCase()}`;
+            // For "buy [token]" - user wants to buy the token with USDT (USDT -> Token)
+            exchangeText += `🔗 Ready to swap?\nVisit: https://changenow.io\nSwap: ${fromToken.ticker.toUpperCase()} → ${toToken.ticker.toUpperCase()}`;
             
           } else {
             exchangeText = `❌ "${mentionedCoin.toUpperCase()}" not available for exchange\n\nTry popular tokens like:\n• Bitcoin (BTC)\n• Ethereum (ETH)\n• Solana (SOL)\n• Cardano (ADA)`;

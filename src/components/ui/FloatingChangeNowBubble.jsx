@@ -231,18 +231,15 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                 </div>
               </div>
               {/* Swap button - only show when expanded */}
-              {isExpanded && content.includes('changenow.io/exchange/') && (
+              {isExpanded && content.includes('changenow.io') && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    const urlMatch = content.match(/changenow\.io\/exchange\/([^\\n]+)/);
-                    if (urlMatch) {
-                      window.open(`https://${urlMatch[0]}`, '_blank');
-                    }
+                    window.open('https://changenow.io', '_blank');
                   }}
                   className="mt-2 px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded-full transition-colors duration-200 shadow-lg"
                 >
-                  🔗 Swap Now
+                  🔗 Visit ChangeNOW
                 </button>
               )}
             </>
