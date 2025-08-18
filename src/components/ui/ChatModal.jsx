@@ -651,24 +651,9 @@ const ChatModal = () => {
       new RegExp(`\\b${coin}\\b`, 'i').test(message)
     );
     
-    // Handle Lurky bubble logic
-    if (mentionedCoin) {
-      console.log('🔎 Lurky popup trigger (ChatModal): matched coin', mentionedCoin);
-      setLurkyOpen(true);
-      setLurkyLoading(true);
-      setLurkyTitle(`${mentionedCoin.toUpperCase()} - Lurky`);
-      (async () => {
-        try {
-          const data = await lurkyService.getCoins(mentionedCoin);
-          const text = typeof data === 'string' ? data : '```json\n' + JSON.stringify(data, null, 2) + '\n```';
-          setLurkyContent(text);
-        } catch (err) {
-          setLurkyContent(`Failed to fetch ${mentionedCoin} data from Lurky.`);
-        } finally {
-          setLurkyLoading(false);
-        }
-      })();
-    }
+    // Handle Lurky bubble logic - DISABLED to prevent duplicate API calls
+    // Main Lurky functionality moved to Home.jsx to avoid multiple API calls
+    console.log('🔎 Lurky logic disabled in ChatModal - preventing duplicate API calls for:', mentionedCoin);
     // Keep Lurky bubble visible - building conversation bubble map
 
     // Send message through WebSocket using the streaming hook format

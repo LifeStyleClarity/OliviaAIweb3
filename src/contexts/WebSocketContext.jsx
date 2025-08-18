@@ -703,6 +703,7 @@ export const WebSocketProvider = ({ children }) => {
           agentId: AGENT_ID,
           search_available: searchEnabled,
           image_available: imageEnabled,
+          context_awareness: window.contextAwarenessData || {},
           ...userOptions
         }
       }
@@ -713,7 +714,11 @@ export const WebSocketProvider = ({ children }) => {
         ...messageData,
         data: {
           ...messageData.data,
-          messages: `[${historyToSend.length} history messages]`
+          messages: `[${historyToSend.length} history messages]`,
+          options: {
+            ...messageData.data.options,
+            context_awareness: `[${Object.keys(messageData.data.options.context_awareness).length} categories]`
+          }
         }
       });
       wsRef.current.send(JSON.stringify(messageData));

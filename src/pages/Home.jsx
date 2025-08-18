@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useWebSocket } from '../contexts/WebSocketContext'
 import { useChatContext } from '../contexts/ChatContext'
@@ -11,6 +11,7 @@ import FloatingCoinStatsBubble from '../components/ui/FloatingCoinStatsBubble.js
 import FloatingICPBubble from '../components/ui/FloatingICPBubble.jsx';
 import FloatingHederaBubble from '../components/ui/FloatingHederaBubble.jsx';
 import FloatingChangeNowBubble from '../components/ui/FloatingChangeNowBubble.jsx';
+import InAppBrowser from '../components/ui/InAppBrowser.jsx';
 
 export default function Home() {
   const { isOpen: isChatOpen, setIsOpen: setIsChatOpen } = useChatContext()
@@ -29,6 +30,75 @@ export default function Home() {
   const [icpBubbles, setIcpBubbles] = useState([])
   const [hederaBubbles, setHederaBubbles] = useState([])
   const [changeNowBubbles, setChangeNowBubbles] = useState([])
+
+  // Context awareness data for AI chat
+  const [contextAwarenessData, setContextAwarenessData] = useState({
+    market_data: {},
+    sentiment_data: {},
+    exchange_data: {},
+    blockchain_data: {},
+    last_updated: null
+  })
+
+  // In-app browser state
+  const [browserOpen, setBrowserOpen] = useState(false)
+  const [browserUrl, setBrowserUrl] = useState('')
+
+  // Handle opening URLs in in-app browser
+  const handleUrlClick = useCallback((url) => {
+    // Unescape any HTML entities that might have been escaped for onclick
+    let cleanUrl = url.replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&quot;/g, '"')
+    
+    // Fix common CoinGecko URL issues
+    if (cleanUrl.includes('coingecko.com')) {
+      // Remove /usd suffix if present (incorrect format)
+      cleanUrl = cleanUrl.replace(/\/usd(\?|$)/, '$1')
+      // Ensure proper format: /en/coins/token-name
+      cleanUrl = cleanUrl.replace(/\/en\/coins\/([^/?]+).*/, '/en/coins/$1')
+      if (!cleanUrl.startsWith('http')) {
+        cleanUrl = 'https://www.coingecko.com' + cleanUrl
+      }
+    }
+    
+    console.log('🔗 Opening URL in in-app browser:', cleanUrl)
+    setBrowserUrl(cleanUrl)
+    setBrowserOpen(true)
+  }, [])
+
+  // Handle closing in-app browser
+  const handleCloseBrowser = useCallback(() => {
+    setBrowserOpen(false)
+    setBrowserUrl('')
+  }, [])
+
+  // Make handleUrlClick globally available for onclick handlers
+  useEffect(() => {
+    window.handleUrlClick = handleUrlClick
+    return () => {
+      delete window.handleUrlClick
+    }
+  }, [handleUrlClick])
+
+  // Helper function to update context awareness data
+  const updateContextAwareness = useCallback((category, token, data) => {
+    setContextAwarenessData(prev => {
+      const newData = {
+        ...prev,
+        [category]: {
+          ...prev[category],
+          [token]: {
+            data: data,
+            timestamp: new Date().toISOString()
+          }
+        },
+        last_updated: new Date().toISOString()
+      };
+      // Make it globally available for WebSocket context
+      window.contextAwarenessData = newData;
+      return newData;
+    })
+  }, [])
+
   const inputRef = useRef(null)
   const { userData, isGuestUser } = useAuth()
   const { isConnected, sendMessage, subscribe, connect } = useWebSocket()
@@ -337,26 +407,7 @@ export default function Home() {
         try {
           const data = await lurkyService.getCoins(mentionedCoin)
           
-          // FULL LURKY API DEBUG
-          console.log('=== LURKY API RESPONSE DEBUG ===');
-          console.log('Full response:', JSON.stringify(data, null, 2));
-          console.log('Response type:', typeof data);
-          console.log('Response keys:', data ? Object.keys(data) : 'no keys');
-          
-          if (data?.coins) {
-            console.log('Number of coins:', data.coins.length);
-            console.log('All coins:', data.coins.map((coin, i) => ({ 
-              index: i, 
-              name: coin.name, 
-              symbol: coin.symbol,
-              allKeys: Object.keys(coin)
-            })));
-            
-            if (data.coins[0]) {
-              console.log('First coin FULL DATA:', JSON.stringify(data.coins[0], null, 2));
-            }
-          }
-          console.log('=== END LURKY DEBUG ===');
+          // Clean Lurky API response processing
           
           let lurkyText = '';
           
@@ -412,53 +463,34 @@ export default function Home() {
               lurkyText = `${targetCoin.name || targetCoin.symbol || searchedCoin} Social Data\n\n`;
             }
             
-            // Debug what's actually in the target coin
-            console.log('🔍 Lurky target coin debug:', JSON.stringify(targetCoin, null, 2));
+            // Extract and display only mentions/sentiment data
+            if (targetCoin.mentions) {
+              const mentions = targetCoin.mentions;
+              lurkyText += `Sentiment Analysis\n\n`;
+              lurkyText += `Bullish: ${mentions.bullish || 0}\n`;
+              lurkyText += `Bearish: ${mentions.bearish || 0}\n`;
+              lurkyText += `Neutral: ${mentions.neutral || 0}\n`;
+              lurkyText += `Total Mentions: ${mentions.total || 0}\n\n`;
+              lurkyText += `Overall: ${mentions.overall_sentiment || 'Unknown'}`;
+            } else {
+              lurkyText += `No sentiment data available`;
+            }
             
-            // Show ALL available fields to see what we actually have
-            lurkyText += `Debug Info:\n`;
-            lurkyText += `Type: ${typeof targetCoin}\n`;
-            lurkyText += `Keys: ${Object.keys(targetCoin).join(', ')}\n\n`;
+            lurkyText += `\n\nPowered by Lurky`;
             
-            // Show each field individually
-            Object.keys(targetCoin).forEach(key => {
-              const value = targetCoin[key];
-              lurkyText += `${key}: `;
-              
-              if (value === null || value === undefined) {
-                lurkyText += 'null\n';
-              } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-                lurkyText += `${value}\n`;
-              } else if (typeof value === 'object') {
-                lurkyText += `[object: ${Object.keys(value).join(', ')}]\n`;
-              } else {
-                lurkyText += `${typeof value}\n`;
-              }
-            });
-            
-            lurkyText += `\nSocial data powered by Lurky`;
+            // Update context awareness with sentiment data
+            updateContextAwareness('sentiment_data', mentionedCoin.toLowerCase(), {
+              source: 'Lurky',
+              name: targetCoin.name || mentionedCoin,
+              symbol: targetCoin.symbol || mentionedCoin.toUpperCase(),
+              mentions: targetCoin.mentions || null
+            })
             
           } else {
-            // Fallback - show any available data
+            // Fallback - show general message
             lurkyText = `${searchedCoin} Social Data\n\n`;
-            if (data && typeof data === 'object') {
-              // Look for any useful fields in the response
-              const usefulFields = ['name', 'symbol', 'price', 'mentions', 'sentiment', 'rank'];
-              let hasData = false;
-              
-              usefulFields.forEach(field => {
-                if (data[field]) {
-                  lurkyText += `${field.charAt(0).toUpperCase() + field.slice(1)}: ${data[field]}\n`;
-                  hasData = true;
-                }
-              });
-              
-              if (!hasData) {
-                lurkyText += `Limited data available for ${searchedCoin}\n\nTry popular coins like Bitcoin, Ethereum, or Solana`;
-              }
-            } else {
-              lurkyText += `No social data available for ${searchedCoin}`;
-            }
+            lurkyText += `No sentiment data available for ${searchedCoin}\n\n`;
+            lurkyText += `Try popular coins like:\n• Bitcoin\n• Ethereum\n• Solana`;
           }
           
           // Update the specific bubble
@@ -555,6 +587,20 @@ export default function Home() {
             marketText += 'Market data not available'
           }
           
+          // Update context awareness with market data
+          updateContextAwareness('market_data', mentionedCoin.toLowerCase(), {
+            source: 'CoinGecko',
+            name: data.name,
+            symbol: data.symbol.toUpperCase(),
+            price: marketData?.current_price?.usd,
+            change_24h: marketData?.price_change_percentage_24h,
+            market_cap: marketData?.market_cap?.usd,
+            volume_24h: marketData?.total_volume?.usd,
+            circulating_supply: marketData?.circulating_supply,
+            max_supply: marketData?.max_supply,
+            rank: data.market_cap_rank
+          })
+
           // Update the specific bubble
           setCoinGeckoBubbles(prev => prev.map(bubble => 
             bubble.id === newBubble.id 
@@ -692,6 +738,18 @@ export default function Home() {
                 tokenText += `Market Cap: ${marketCap}\n`;
                 tokenText += `Volume: ${volume}\n`;
                 tokenText += `Rank: #${coin.rank || 'N/A'}`;
+                
+                // Update context awareness with CoinStats data
+                updateContextAwareness('market_data', detectedToken.toLowerCase(), {
+                  source: 'CoinStats',
+                  name: coin.name,
+                  symbol: coin.symbol,
+                  price: coin.price,
+                  change_24h: coin.priceChange1d,
+                  market_cap: coin.marketCap,
+                  volume_24h: coin.volume,
+                  rank: coin.rank
+                })
               } else {
                 tokenText = `Token "${detectedToken.toUpperCase()}" not found\n\nTry searching for:\n• Bitcoin (BTC)\n• Ethereum (ETH)\n• Solana (SOL)\n• Popular tokens`;
               }
@@ -769,6 +827,18 @@ export default function Home() {
             hederaText = 'Hedera network data loaded successfully!'
           }
           
+          // Update context awareness with Hedera blockchain data
+          updateContextAwareness('blockchain_data', 'hedera', {
+            source: 'Hgraph',
+            token: 'HBAR',
+            price: data.price?.usd,
+            change_24h: data.price?.usd_24h_change,
+            market_cap: data.price?.usd_market_cap,
+            total_supply: data.network?.total_supply,
+            recent_transactions: data.transactions?.transactions?.length,
+            network_status: 'active'
+          })
+          
           // Update the bubble with content
           setHederaBubbles(prev => prev.map(bubble => 
             bubble.id === hederaBubbleId 
@@ -844,8 +914,28 @@ export default function Home() {
             // For "buy [token]" - user wants to buy the token with USDT (USDT -> Token)
             exchangeText += `Ready to swap?\nVisit: https://changenow.io\nSwap: ${fromToken.ticker.toUpperCase()} → ${toToken.ticker.toUpperCase()}`;
             
+            // Update context awareness with exchange data
+            updateContextAwareness('exchange_data', mentionedCoin.toLowerCase(), {
+              source: 'ChangeNOW',
+              from_currency: fromToken.ticker.toUpperCase(),
+              to_currency: toToken.ticker.toUpperCase(),
+              min_amount: exchangeInfo.minAmount?.minAmount,
+              max_amount: exchangeInfo.exchangeRange?.maxAmount,
+              exchange_rate: exchangeInfo.exchangeAmount?.estimatedAmount,
+              fee_percentage: exchangeInfo.marketInfo?.fee ? (exchangeInfo.marketInfo.fee * 100).toFixed(2) : null,
+              processing_time: '5-30 minutes',
+              available: true
+            })
+            
           } else {
             exchangeText = `"${mentionedCoin.toUpperCase()}" not available for exchange\n\nTry popular tokens like:\n• Bitcoin (BTC)\n• Ethereum (ETH)\n• Solana (SOL)\n• Cardano (ADA)`;
+            
+            // Update context awareness even for unavailable tokens
+            updateContextAwareness('exchange_data', mentionedCoin.toLowerCase(), {
+              source: 'ChangeNOW',
+              available: false,
+              reason: 'Token not supported'
+            })
           }
           
           // Update the specific bubble
@@ -984,10 +1074,33 @@ export default function Home() {
                     }}
                     dangerouslySetInnerHTML={{
                       __html: msg.content
-                        // Convert markdown links [text](url) to HTML links
-                        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: #31F46E; text-decoration: underline;">$1</a>')
-                        // Convert plain URLs to clickable links  
-                        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #31F46E; text-decoration: underline;">$1</a>')
+                        // Convert markdown links [text](url) to HTML links with in-app browser
+                        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+                          const cleanUrl = url.trim().replace(/[.,;!?]*$/, ''); // Remove trailing punctuation
+                          const escapedUrl = cleanUrl.replace(/'/g, '&#39;').replace(/"/g, '&quot;'); // Escape quotes properly
+                          const uniqueId = 'link_' + Math.random().toString(36).substr(2, 9);
+                          return `<a id="${uniqueId}" href="#" onclick="window.handleUrlClick && window.handleUrlClick('${escapedUrl}'); return false;" style="color: #31F46E; text-decoration: underline; cursor: pointer;">${text}</a>`;
+                        })
+                        // Convert plain URLs with protocol to clickable links
+                        .replace(/(^|[\s>])(https?:\/\/[a-zA-Z0-9](?:[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=])*[a-zA-Z0-9\-_~/#@$*+=])/g, (match, prefix, url) => {
+                          // Clean up URL - remove trailing punctuation that's likely sentence punctuation
+                          const cleanUrl = url.replace(/[.,;!?]+$/, '');
+                          const escapedUrl = cleanUrl.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+                          const uniqueId = 'link_' + Math.random().toString(36).substr(2, 9);
+                          return `${prefix}<a id="${uniqueId}" href="#" onclick="window.handleUrlClick && window.handleUrlClick('${escapedUrl}'); return false;" style="color: #31F46E; text-decoration: underline; cursor: pointer;">${cleanUrl}</a>`;
+                        })
+                        // Convert URLs without protocol (www.example.com, domain.com) to clickable links
+                        .replace(/(^|[\s>])((?:www\.)?[a-zA-Z0-9](?:[a-zA-Z0-9\-._]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}(?:\/[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=]*)?)/g, (match, prefix, url) => {
+                          // Skip if it's already part of a protocol URL or already a link
+                          if (match.includes('://') || match.includes('<a')) return match;
+                          
+                          const cleanUrl = url.replace(/[.,;!?]+$/, '');
+                          // Add https:// if no protocol
+                          const fullUrl = cleanUrl.startsWith('http') ? cleanUrl : 'https://' + cleanUrl;
+                          const escapedUrl = fullUrl.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+                          const uniqueId = 'link_' + Math.random().toString(36).substr(2, 9);
+                          return `${prefix}<a id="${uniqueId}" href="#" onclick="window.handleUrlClick && window.handleUrlClick('${escapedUrl}'); return false;" style="color: #31F46E; text-decoration: underline; cursor: pointer;">${cleanUrl}</a>`;
+                        })
                     }}
                   >
                   </div>
@@ -1112,6 +1225,13 @@ export default function Home() {
           addParticlesToSwarm={addParticlesToSwarm}
         />
       ))}
+      
+      {/* In-App Browser */}
+      <InAppBrowser
+        isOpen={browserOpen}
+        url={browserUrl}
+        onClose={handleCloseBrowser}
+      />
     </div>
   )
 }

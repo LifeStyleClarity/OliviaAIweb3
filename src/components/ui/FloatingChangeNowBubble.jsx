@@ -238,12 +238,19 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                       e.stopPropagation();
                       // Extract the trading pair from content to build direct URL
                       const swapMatch = content.match(/Swap: (\w+) → (\w+)/);
+                      let url;
                       if (swapMatch) {
                         const fromToken = swapMatch[1].toUpperCase();
                         const toToken = swapMatch[2].toUpperCase();
-                        window.open(`https://changenow.io/exchange?from=${fromToken}&to=${toToken}&amount=1`, '_blank');
+                        url = `https://changenow.io/exchange?from=${fromToken}&to=${toToken}&amount=1`;
                       } else {
-                        window.open('https://changenow.io', '_blank');
+                        url = 'https://changenow.io';
+                      }
+                      // Use in-app browser if available, otherwise fallback to external
+                      if (window.handleUrlClick) {
+                        window.handleUrlClick(url);
+                      } else {
+                        window.open(url, '_blank');
                       }
                     }}
                     className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded-full transition-colors duration-200 shadow-lg"

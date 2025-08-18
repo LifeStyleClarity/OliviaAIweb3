@@ -4,7 +4,7 @@ export const changeNowService = {
   // Get list of all available currencies
   async getCurrencies() {
     try {
-      const { data } = await axiosChangeNow.get('/exchange/currencies');
+      const { data } = await axiosChangeNow.get('/currencies');
       return { result: data };
     } catch (error) {
       console.error('ChangeNOW currencies fetch error:', error);
@@ -15,10 +15,10 @@ export const changeNowService = {
   // Get minimum exchange amount for a currency pair
   async getMinimalExchange(fromCurrency, toCurrency) {
     try {
-      const { data } = await axiosChangeNow.get('/exchange/min-amount', {
+      const { data } = await axiosChangeNow.get('/min-amount', {
         params: {
-          fromCurrency: fromCurrency.toLowerCase(),
-          toCurrency: toCurrency.toLowerCase()
+          from: fromCurrency.toLowerCase(),
+          to: toCurrency.toLowerCase()
         }
       });
       return data;
@@ -31,12 +31,11 @@ export const changeNowService = {
   // Get exchange amount estimate
   async getExchangeAmount(fromCurrency, toCurrency, amount) {
     try {
-      const { data } = await axiosChangeNow.get('/exchange/estimated-amount', {
+      const { data } = await axiosChangeNow.get('/exchange-amount', {
         params: {
-          fromCurrency: fromCurrency.toLowerCase(),
-          toCurrency: toCurrency.toLowerCase(),
-          fromAmount: amount,
-          flow: 'standard'
+          from: fromCurrency.toLowerCase(),
+          to: toCurrency.toLowerCase(),
+          amount: amount
         }
       });
       return data;
@@ -46,14 +45,13 @@ export const changeNowService = {
     }
   },
 
-  // Get exchange range (min and max limits)
+  // Get exchange range (min and max limits)  
   async getExchangeRange(fromCurrency, toCurrency) {
     try {
-      const { data } = await axiosChangeNow.get('/exchange/range', {
+      const { data } = await axiosChangeNow.get('/exchange-range', {
         params: {
-          fromCurrency: fromCurrency.toLowerCase(),
-          toCurrency: toCurrency.toLowerCase(),
-          flow: 'standard'
+          from: fromCurrency.toLowerCase(),
+          to: toCurrency.toLowerCase()
         }
       });
       return data;
@@ -66,8 +64,8 @@ export const changeNowService = {
   // Get market info for available pairs
   async getMarketInfo(fromCurrency, toCurrency) {
     try {
-      // Use currencies endpoint to get basic info since market-info might not exist in v2
-      const { data } = await axiosChangeNow.get('/exchange/currencies', {
+      // Use currencies endpoint to get basic info 
+      const { data } = await axiosChangeNow.get('/currencies', {
         params: {
           active: true
         }
