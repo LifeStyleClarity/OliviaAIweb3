@@ -1,6 +1,7 @@
 // src/components/TopNavigation.jsx
 import { useEffect, useState } from 'react';
-import { TonConnectButton, useTonWallet } from '@tonconnect/ui-react';
+import { TonConnectButton, useTonWallet, useTonConnectUI } from '@tonconnect/ui-react';
+import { useInternetIdentity } from '../../contexts/InternetIdentityContext';
 import NotificationButton from '../ui/NotificationButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWebSocket } from '../../contexts/WebSocketContext';
@@ -12,8 +13,10 @@ import { useAccountUpgrade } from '../../hooks/useAccountUpgrade';
 
 export default function TopNavigation() {
   const wallet = useTonWallet();
+  const [tonConnectUI] = useTonConnectUI();
   const { setUserAuthenticated, telegramUser, setTelegramUser, isGuestUser, logout, userData, setUserData, setIsGuestUser } = useAuth();
   const { icpUser, icpInitialized } = useWebSocket();
+  const { isAuthenticated: internetIdentityAuth, logout: logoutInternetIdentity, principal } = useInternetIdentity();
   const navigate = useNavigate();
   // Remove isCreatingICP state since we're just triggering a conversation
 
@@ -32,25 +35,60 @@ export default function TopNavigation() {
   //     setUserAuthenticated(true);
   //   }
   // }, [wallet, setUserAuthenticated]);
-  // Subscribe to wallet changes
+  // Subscribe to authentication changes (wallet, telegram, internet identity)
   useEffect(() => {
-    if (!wallet && !telegramUser) {
+    // If no authentication method is active, set userAuthenticated to false
+    if (!wallet && !telegramUser && !internetIdentityAuth) {
+      console.log('🔐 TopNav: No auth method detected, setting userAuthenticated=false');
       setUserAuthenticated(false);
     } else if (wallet) {
-      // console.log("wallet as been connected inside the home page");
-      setTelegramUser(false)
+      console.log('🔐 TopNav: TON wallet detected, setting userAuthenticated=true');
+      setTelegramUser(false);
       setUserAuthenticated(true);
     } else if (telegramUser) {
+      console.log('🔐 TopNav: Telegram user detected, setting userAuthenticated=true');
       setTelegramUser(true);
       setUserAuthenticated(true);
+    } else if (internetIdentityAuth) {
+      console.log('🔐 TopNav: Internet Identity auth detected, setting userAuthenticated=true');
+      setTelegramUser(false);
+      setUserAuthenticated(true);
     }
-  }, [wallet, setUserAuthenticated, telegramUser]);
+  }, [wallet, setUserAuthenticated, telegramUser, internetIdentityAuth]);
 
-  // Handle guest logout
-  const handleGuestLogout = () => {
-    logout();
-    navigate('/');
+  // Handle comprehensive logout for all authentication types
+  const handleLogout = async () => {
+    console.log('🔐 Logging out user...');
+    
+    try {
+      // Disconnect from TON wallet if connected
+      if (wallet && tonConnectUI) {
+        console.log('🔐 Disconnecting from TON wallet');
+        await tonConnectUI.disconnect();
+      }
+      
+      // Logout from Internet Identity if authenticated
+      if (internetIdentityAuth && logoutInternetIdentity) {
+        console.log('🔐 Logging out from Internet Identity');
+        await logoutInternetIdentity();
+      }
+      
+      // Logout from regular auth context (covers guest, telegram, etc.)
+      logout();
+      
+      // Navigate to login page
+      navigate('/login');
+      
+      console.log('🔐 Logout completed successfully');
+    } catch (error) {
+      console.error('❌ Error during logout:', error);
+      // Still navigate to login page even if there's an error
+      navigate('/login');
+    }
   };
+
+  // Keep the old function name for backwards compatibility
+  const handleGuestLogout = handleLogout;
 
   // Handle ICP ID creation - navigate to dedicated setup page
   const handleCreateICPID = () => {
@@ -134,8 +172,45 @@ export default function TopNavigation() {
                   </>
                 )}
               </div>
+            ) : internetIdentityAuth ? (
+              // Show Internet Identity info and logout button
+              <div className="flex items-center gap-2 flex-nowrap">
+                <div className="flex flex-col">
+                  <span className="text-blue-400 text-xs">Internet Identity</span>
+                  <span className="text-white text-sm font-mono">
+                    {principal ? formatPrincipalId(principal) : 'Connected'}
+                  </span>
+                </div>
+                <Button
+                  onPress={handleLogout}
+                  className="bg-transparent text-white/70 underline text-sm"
+                  size="sm"
+                >
+                  Logout
+                </Button>
+              </div>
+            ) : wallet ? (
+              // Show TON wallet info and logout button
+              <div className="flex items-center gap-2 flex-nowrap">
+                <div className="flex flex-col">
+                  <span className="text-cyan-400 text-xs">TON Wallet</span>
+                  <span className="text-white text-sm font-mono">
+                    {wallet.account.address ? 
+                      `${wallet.account.address.slice(0, 6)}...${wallet.account.address.slice(-4)}` : 
+                      'Connected'
+                    }
+                  </span>
+                </div>
+                <Button
+                  onPress={handleLogout}
+                  className="bg-transparent text-white/70 underline text-sm"
+                  size="sm"
+                >
+                  Logout
+                </Button>
+              </div>
             ) : (
-            <TonConnectButton className="!text-base bg-transparent" />
+              <TonConnectButton className="!text-base bg-transparent" />
             )}
           </div>
           <div className="flex items-center gap-2 flex-nowrap">

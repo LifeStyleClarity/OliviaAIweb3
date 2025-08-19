@@ -1,35 +1,67 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import PropTypes from 'prop-types';
+import { useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useInternetIdentity } from '../../contexts/InternetIdentityContext';
 
 export const PrivateRoute = () => {
   const { userAuthenticated, telegramUser, isGuestUser } = useAuth();
+  const { isAuthenticated: internetIdentityAuth, principal } = useInternetIdentity();
   const location = useLocation();
 
-  //console.log('🔒 PrivateRoute state:', { userAuthenticated, telegramUser, isGuestUser, location });
+  // Memoize access check to prevent unnecessary re-renders
+  const hasAccess = useMemo(() => {
+    return userAuthenticated || telegramUser || isGuestUser || internetIdentityAuth;
+  }, [userAuthenticated, telegramUser, isGuestUser, internetIdentityAuth]);
 
-  // Allow access if user is authenticated, telegram user, or guest user
-  if (!userAuthenticated && !telegramUser && !isGuestUser) {
-    //console.log('🔒 PrivateRoute: Redirecting to login');
+  // Memoize debug info to prevent console spam
+  const debugInfo = useMemo(() => ({
+    userAuthenticated, 
+    telegramUser, 
+    isGuestUser,
+    internetIdentityAuth,
+    principal: principal ? `${principal.slice(0,10)}...` : null,
+    pathname: location.pathname 
+  }), [userAuthenticated, telegramUser, isGuestUser, internetIdentityAuth, principal, location.pathname]);
+
+  console.log('🔒 PrivateRoute state:', debugInfo);
+
+  if (!hasAccess) {
+    console.log('🔒 PrivateRoute: BLOCKING ACCESS - All auth states are false');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  //console.log('🔒 PrivateRoute: Allowing access');
+  console.log('🔒 PrivateRoute: ALLOWING ACCESS - Auth method found');
   return <Outlet />;
 };
 
 export const PublicRoute = ({ children }) => {
   const { userAuthenticated, telegramUser, isGuestUser } = useAuth();
-  //console.log('🔄 PublicRoute state:', { userAuthenticated, telegramUser, isGuestUser });
+  const { isAuthenticated: internetIdentityAuth, principal } = useInternetIdentity();
+  
+  // Memoize authentication check to prevent unnecessary re-renders
+  const isAuthenticated = useMemo(() => {
+    return userAuthenticated || telegramUser || isGuestUser || internetIdentityAuth;
+  }, [userAuthenticated, telegramUser, isGuestUser, internetIdentityAuth]);
 
-  // If user is authenticated (including guest), redirect to home
-  if (userAuthenticated || telegramUser || isGuestUser) {
-    //console.log('🔄 PublicRoute: Redirecting to home');
+  // Memoize debug info to prevent console spam
+  const debugInfo = useMemo(() => ({
+    userAuthenticated, 
+    telegramUser, 
+    isGuestUser,
+    internetIdentityAuth,
+    principal: principal ? `${principal.slice(0,10)}...` : null
+  }), [userAuthenticated, telegramUser, isGuestUser, internetIdentityAuth, principal]);
+
+  console.log('🔄 PublicRoute state:', debugInfo);
+  
+  if (isAuthenticated) {
+    console.log('🔄 PublicRoute: User authenticated, redirecting to home');
     return <Navigate to="/home" replace />;
   }
 
-  //console.log('🔄 PublicRoute: Showing login page');
+  console.log('🔄 PublicRoute: Showing login page');
   return children;
 };
 

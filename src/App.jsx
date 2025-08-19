@@ -51,7 +51,7 @@ function App() {
               path="/"
               element={
                 <PublicRoute>
-                  <LandingPage />
+                  <Login />
                 </PublicRoute>
               }
             />

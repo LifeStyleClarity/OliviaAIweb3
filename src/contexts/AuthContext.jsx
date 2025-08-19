@@ -10,10 +10,15 @@ export function AuthProviderLogin({ children }) {
   const [isGuestUser, setIsGuestUser] = useState(false);
 
 
-  // Log auth state changes
-  // useEffect(() => {
-  //   //console.log('🔐 Auth state changed:', { userAuthenticated, userData, telegramUser });
-  // }, [userAuthenticated, userData, telegramUser]);
+  // Log auth state changes for debugging
+  useEffect(() => {
+    console.log('🔐 AuthContext state changed:', { 
+      userAuthenticated, 
+      userData: userData?.user_id, 
+      telegramUser, 
+      isGuestUser 
+    });
+  }, [userAuthenticated, userData, telegramUser, isGuestUser]);
 
   // Guest login function
   const loginAsGuest = () => {

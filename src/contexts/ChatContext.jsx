@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 const ChatContext = createContext();
 
 export function ChatProvider({ children }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
 
   return (
     <ChatContext.Provider value={{ isOpen, setIsOpen }}>

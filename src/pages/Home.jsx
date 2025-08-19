@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useWebSocket } from '../contexts/WebSocketContext'
-import { useChatContext } from '../contexts/ChatContext'
-import { setChatOpenCallback } from '../utils/olivia'
+import { useInternetIdentity } from '../contexts/InternetIdentityContext'
 import { useAccountUpgrade } from '../hooks/useAccountUpgrade';
 import { lurkyService, coingeckoService, coinstatsService, hgraphService, changeNowService } from '../api';
 import FloatingLurkyBubble from '../components/ui/FloatingLurkyBubble.jsx';
@@ -14,7 +13,6 @@ import FloatingChangeNowBubble from '../components/ui/FloatingChangeNowBubble.js
 import InAppBrowser from '../components/ui/InAppBrowser.jsx';
 
 export default function Home() {
-  const { isOpen: isChatOpen, setIsOpen: setIsChatOpen } = useChatContext()
   const [messages, setMessages] = useState([])
   const [currentResponse, setCurrentResponse] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -44,10 +42,18 @@ export default function Home() {
   const [browserOpen, setBrowserOpen] = useState(false)
   const [browserUrl, setBrowserUrl] = useState('')
 
+  // Debug browser state changes
+  useEffect(() => {
+    console.log('🔗 Browser state changed:', { browserOpen, browserUrl })
+  }, [browserOpen, browserUrl])
+
   // Handle opening URLs in in-app browser
   const handleUrlClick = useCallback((url) => {
     // Unescape any HTML entities that might have been escaped for onclick
     let cleanUrl = url.replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&quot;/g, '"')
+    
+    console.log('🔗 URL click triggered with:', url)
+    console.log('🔗 Cleaned URL:', cleanUrl)
     
     // Fix common CoinGecko URL issues
     if (cleanUrl.includes('coingecko.com')) {
@@ -60,7 +66,8 @@ export default function Home() {
       }
     }
     
-    console.log('🔗 Opening URL in in-app browser:', cleanUrl)
+    console.log('🔗 Final URL for browser:', cleanUrl)
+    console.log('🔗 Setting browserOpen to true')
     setBrowserUrl(cleanUrl)
     setBrowserOpen(true)
   }, [])
@@ -77,6 +84,24 @@ export default function Home() {
     return () => {
       delete window.handleUrlClick
     }
+  }, [handleUrlClick])
+
+  // Add event delegation for URL clicks to handle dangerouslySetInnerHTML links
+  useEffect(() => {
+    const handleDocumentClick = (event) => {
+      // Check if clicked element is one of our generated links
+      if (event.target.tagName === 'A' && event.target.id?.startsWith('link_')) {
+        event.preventDefault();
+        const href = event.target.getAttribute('data-url');
+        if (href && handleUrlClick) {
+          console.log('🔗 Link clicked via event delegation:', href);
+          handleUrlClick(href);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
   }, [handleUrlClick])
 
   // Helper function to update context awareness data
@@ -101,7 +126,8 @@ export default function Home() {
 
   const inputRef = useRef(null)
   const { userData, isGuestUser } = useAuth()
-  const { isConnected, sendMessage, subscribe, connect } = useWebSocket()
+  const { isConnected, sendMessage, subscribe, connect, isConnecting, connectionAttempts, currentEndpointIndex, wsEndpoints } = useWebSocket()
+  const { principal, isAuthenticated } = useInternetIdentity()
   const { forceShowUpgrade } = useAccountUpgrade(); // ICP upgrade
 
   // Track mouse position
@@ -250,10 +276,208 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [isLoading])
 
+  // Parse AI responses for coin mentions and show bubbles
+  const parseAIResponseForCoins = useCallback(async (aiMessage) => {
+    console.log('🤖 Parsing AI response for coin mentions:', aiMessage)
+    
+    // Known cryptocurrencies and common variations (same as user message parsing)
+    const knownCryptos = [
+      'bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'cardano', 'ada',
+      'polygon', 'matic', 'dogecoin', 'doge', 'chainlink', 'link', 'litecoin', 'ltc',
+      'polkadot', 'dot', 'avalanche', 'avax', 'cosmos', 'atom', 'uniswap', 'uni',
+      'shiba', 'shib', 'pepe', 'bonk', 'popcat', 'wif', 'ton', 'usdt', 'usdc',
+      'bnb', 'xrp', 'ripple', 'stellar', 'xlm', 'vechain', 'vet', 'tron', 'trx',
+      'icp', 'hbar', 'hedera', 'near', 'algo', 'algorand', 'fil', 'filecoin',
+      'omikami', 'rize', 'sui', 'apt', 'aptos', 'injective', 'inj', 'render', 'rndr',
+      'theta', 'mana', 'decentraland', 'sand', 'sandbox', 'axs', 'axie',
+      'cfx', 'conflux', 'pudgy', 'penguins', 'ethena', 'curve', 'dao', 'crv'
+    ];
+    
+    // Extract potential coin names from AI response
+    const words = aiMessage.toLowerCase().match(/\b[a-zA-Z]{2,}\b/g) || [];
+    let mentionedCoins = words.filter(word => knownCryptos.includes(word));
+    
+    // Also check for compound coin names like "Pudgy Penguins", "Curve DAO"
+    const compoundPatterns = [
+      /pudgy\s+penguins?/gi,
+      /curve\s+dao/gi,
+      /bonk\s+inu?/gi
+    ];
+    
+    for (const pattern of compoundPatterns) {
+      const matches = aiMessage.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          const cleanMatch = match.toLowerCase().replace(/\s+/g, '').replace(/s$/, ''); // remove spaces and plurals
+          if (cleanMatch === 'pudgypenguins' || cleanMatch === 'pudgypenguin') {
+            mentionedCoins.push('pudgy');
+          } else if (cleanMatch === 'curvedao') {
+            mentionedCoins.push('curve');
+          } else if (cleanMatch === 'bonkinu' || cleanMatch === 'bonkin') {
+            mentionedCoins.push('bonk');
+          }
+        });
+      }
+    }
+    
+    // Remove duplicates and consolidate same tokens (e.g., polygon/matic, bitcoin/btc)
+    const coinGroups = {
+      'polygon': ['polygon', 'matic'],
+      'bitcoin': ['bitcoin', 'btc'], 
+      'ethereum': ['ethereum', 'eth'],
+      'solana': ['solana', 'sol'],
+      'cardano': ['cardano', 'ada'],
+      'chainlink': ['chainlink', 'link'],
+      'dogecoin': ['dogecoin', 'doge'],
+      'shiba': ['shiba', 'shib'],
+      'ripple': ['ripple', 'xrp'],
+      'binance': ['binance', 'bnb'],
+      'uniswap': ['uniswap', 'uni'],
+      'avalanche': ['avalanche', 'avax'],
+      'polkadot': ['polkadot', 'dot'],
+      'cosmos': ['cosmos', 'atom'],
+      'algorand': ['algorand', 'algo'],
+      'curve': ['curve', 'crv', 'dao'],
+      'pudgy': ['pudgy', 'penguins', 'pengu'],
+      'conflux': ['conflux', 'cfx'],
+      'ethena': ['ethena', 'ena']
+    };
+    
+    // Consolidate coins to avoid duplicates
+    const consolidatedCoins = [];
+    const processedGroups = new Set();
+    
+    for (const coin of mentionedCoins) {
+      let foundGroup = false;
+      
+      // Check if this coin belongs to a group
+      for (const [mainCoin, variants] of Object.entries(coinGroups)) {
+        if (variants.includes(coin.toLowerCase()) && !processedGroups.has(mainCoin)) {
+          consolidatedCoins.push(mainCoin);
+          processedGroups.add(mainCoin);
+          foundGroup = true;
+          break;
+        }
+      }
+      
+      // If not in any group, add it directly (but avoid duplicates)
+      if (!foundGroup && !consolidatedCoins.includes(coin.toLowerCase())) {
+        consolidatedCoins.push(coin.toLowerCase());
+      }
+    }
+    
+    const uniqueCoins = consolidatedCoins;
+    console.log('🪙 AI mentioned coins (consolidated):', uniqueCoins);
+    
+    // Process each mentioned coin (limit to first 3 to avoid spam)
+    const coinsToProcess = uniqueCoins.slice(0, 3);
+    
+    for (const coin of coinsToProcess) {
+      console.log(`🔍 Processing AI-mentioned coin: ${coin}`);
+      
+      // Create CoinStats bubble for this coin (better for trending/new coins)
+      const coinName = coin.charAt(0).toUpperCase() + coin.slice(1);
+      const coinStatsBubble = {
+        id: Date.now() + Math.random() + Math.random(), // Extra unique ID
+        title: `${coinName} (AI Mention) - CoinStats`,
+        content: `Loading ${coinName} live data from AI mention...`,
+        loading: true
+      };
+      
+      setCoinstatsBubbles(prev => [...prev, coinStatsBubble]);
+      
+      // Map coin names to better search terms for CoinStats API
+      let searchTerm = coin;
+      const coinMappings = {
+        'cfx': 'conflux',
+        'pudgy': 'pengu', // Pudgy Penguins token symbol
+        'penguins': 'pengu',
+        'curve': 'crv',
+        'dao': 'crv', // Curve DAO
+        'ethena': 'ena',
+        'bonk': 'bonk',
+        'btc': 'bitcoin',
+        'eth': 'ethereum',
+        'sol': 'solana'
+      };
+      
+      if (coinMappings[coin.toLowerCase()]) {
+        searchTerm = coinMappings[coin.toLowerCase()];
+        console.log(`🔄 Mapped ${coin} to ${searchTerm} for better search results`);
+      }
+      
+      // Simple CoinStats API call
+      try {
+        const searchData = await coinstatsService.searchCoins(searchTerm);
+          
+          if (searchData.result && searchData.result.length > 0) {
+            const coinData = searchData.result[0]; // Get first/best match
+            const change = coinData.priceChange1d || 0;
+            const changeDirection = change > 0 ? '+' : '';
+            const price = coinData.price > 1000 ? `${(coinData.price/1000).toFixed(2)}k` : 
+                         coinData.price > 1 ? coinData.price.toFixed(2) : 
+                         coinData.price > 0.01 ? coinData.price.toFixed(4) :
+                         coinData.price.toFixed(8);
+            const marketCap = coinData.marketCap ? `$${(coinData.marketCap/1e9).toFixed(2)}B` : 'N/A';
+            const volume = coinData.volume ? `$${(coinData.volume/1e6).toFixed(1)}M` : 'N/A';
+            
+            let marketText = `${coinData.name} (${coinData.symbol}) - Mentioned by AI\n\n`;
+            marketText += `💰 Price: $${price}\n`;
+            marketText += `📈 24h: ${changeDirection}${change.toFixed(2)}%\n`;
+            marketText += `🏦 Market Cap: ${marketCap}\n`;
+            marketText += `📊 Volume: ${volume}\n`;
+            marketText += `🏆 Rank: #${coinData.rank || 'N/A'}\n\n`;
+            marketText += `✅ Successfully loaded`;
+            
+            // Update context awareness with CoinStats data
+            updateContextAwareness('market_data', coin.toLowerCase(), {
+              source: 'CoinStats (AI Mention)',
+              name: coinData.name,
+              symbol: coinData.symbol,
+              price: coinData.price,
+              change_24h: coinData.priceChange1d,
+              market_cap: coinData.marketCap,
+              volume_24h: coinData.volume,
+              rank: coinData.rank,
+              mentioned_by_ai: true
+            });
+            
+            // Update the bubble with live data
+            setCoinstatsBubbles(prev => prev.map(bubble => 
+              bubble.id === coinStatsBubble.id 
+                ? { ...bubble, content: marketText, loading: false }
+                : bubble
+            ));
+            
+          } else {
+            // Not found - simple error message
+            const notFoundText = `${coinName} - AI Mention\n\n❌ Not found in CoinStats\n\nCheck manually on exchanges`;
+            
+            setCoinstatsBubbles(prev => prev.map(bubble => 
+              bubble.id === coinStatsBubble.id 
+                ? { ...bubble, content: notFoundText, loading: false }
+                : bubble
+            ));
+          }
+        
+      } catch (error) {
+        console.error(`CoinStats error for ${coin}:`, error);
+        const errorText = `${coinName} - AI Mention\n\n⚠️ API Error\n\nTry again later`;
+        
+        setCoinstatsBubbles(prev => prev.map(bubble => 
+          bubble.id === coinStatsBubble.id 
+            ? { ...bubble, content: errorText, loading: false }
+            : bubble
+        ));
+      }
+      
+      // Small delay between coin lookups to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 750));
+    }
+  }, [updateContextAwareness]);
+
   // Handle WebSocket messages
   useEffect(() => {
-    if (!isChatOpen) return
-
     const handleMessage = (data) => {
       console.log('📨 Received message:', data)
       
@@ -265,6 +489,10 @@ export default function Home() {
         setMessages(prev => [...prev, { type: 'ai', content: finalResponse }])
         setCurrentResponse('')
         setIsLoading(false)
+        
+        // Parse AI response for coin mentions
+        parseAIResponseForCoins(finalResponse);
+        
         // Show input after response is complete
         setTimeout(() => {
           setShowInput(true)
@@ -274,6 +502,10 @@ export default function Home() {
         setMessages(prev => [...prev, { type: 'ai', content: response }])
         setCurrentResponse('')
         setIsLoading(false)
+        
+        // Parse AI response for coin mentions
+        parseAIResponseForCoins(response);
+        
         // Show input after response
         setTimeout(() => {
           setShowInput(true)
@@ -283,6 +515,10 @@ export default function Home() {
         setMessages(prev => [...prev, { type: 'ai', content: response }])
         setCurrentResponse('')
         setIsLoading(false)
+        
+        // Parse AI response for coin mentions
+        parseAIResponseForCoins(response);
+        
         // Show input after response
         setTimeout(() => {
           setShowInput(true)
@@ -292,7 +528,7 @@ export default function Home() {
 
     const unsubscribe = subscribe(handleMessage)
     return () => unsubscribe()
-  }, [isChatOpen, subscribe, currentResponse])
+  }, [subscribe, currentResponse, parseAIResponseForCoins])
 
   // Focus input when it appears
   useEffect(() => {
@@ -358,7 +594,10 @@ export default function Home() {
       'polkadot', 'dot', 'avalanche', 'avax', 'cosmos', 'atom', 'uniswap', 'uni',
       'shiba', 'shib', 'pepe', 'bonk', 'popcat', 'wif', 'ton', 'usdt', 'usdc',
       'bnb', 'xrp', 'ripple', 'stellar', 'xlm', 'vechain', 'vet', 'tron', 'trx',
-      'icp', 'hbar', 'hedera', 'near', 'algo', 'algorand', 'fil', 'filecoin'
+      'icp', 'hbar', 'hedera', 'near', 'algo', 'algorand', 'fil', 'filecoin',
+      'omikami', 'rize', 'sui', 'apt', 'aptos', 'injective', 'inj', 'render', 'rndr',
+      'theta', 'mana', 'decentraland', 'sand', 'sandbox', 'axs', 'axie',
+      'cfx', 'conflux', 'pudgy', 'penguins', 'ethena', 'curve', 'dao', 'crv'
     ];
     
     // Only consider words that are actually known cryptocurrencies
@@ -957,8 +1196,40 @@ export default function Home() {
     }
     // Keep ChangeNOW bubble visible - building conversation bubble map
 
-    // Send message to Olivia
-    await sendMessage(message)
+    // Send message to Olivia - check WebSocket connection first
+    if (!isConnected) {
+      console.log('❌ WebSocket not connected, attempting to reconnect...')
+      // Try to connect before sending
+      connect()
+      
+      // Show a helpful message to user
+      setTimeout(() => {
+        if (!isConnected) {
+          setMessages(prev => [...prev, { 
+            type: 'ai', 
+            content: 'Sorry, I\'m having trouble connecting to my AI service right now. Please try again in a moment. In the meantime, you can still see cryptocurrency data above!' 
+          }])
+          setIsLoading(false)
+          setShowInput(true)
+        }
+      }, 3000)
+      
+      // Still try to send message in case connection establishes quickly
+      try {
+        await sendMessage(message)
+      } catch (error) {
+        console.error('Failed to send message:', error)
+        setMessages(prev => [...prev, { 
+          type: 'ai', 
+          content: 'I\'m currently offline, but you can still get crypto data from the bubbles above! Try asking about Bitcoin, Ethereum, or other coins.' 
+        }])
+        setIsLoading(false)
+        setShowInput(true)
+      }
+    } else {
+      // WebSocket is connected, send normally
+      await sendMessage(message)
+    }
   }
 
   // Handle Enter key press
@@ -968,63 +1239,47 @@ export default function Home() {
     }
   }
 
-  // Register the chat open callback
+  // Auto-initialize the chat on component mount
   useEffect(() => {
-    setChatOpenCallback(async (shouldOpen) => {
-      if (shouldOpen) {
-        setIsChatOpen(true)
-        setIsLoading(false) // Don't show loading initially
-        setMessages([{
-          type: 'ai',
-          content: "Hey there, I've got some interesting stuff I've found! Let me show you."
-        }]) // Show instant greeting
-        setCurrentResponse('')
-        setShowInput(false)
-        setUserInput('')
-        
-        // Show thinking indicator after greeting, then send hidden message
-        setTimeout(async () => {
-          console.log('Home.jsx: Starting thinking indicator and message send process...');
-          setIsLoading(true) // Show thinking indicator after greeting
-          
-          console.log('Home.jsx: WebSocket status:', { isConnected });
-          
-          // Always try to connect (it's safe to call multiple times)
-          console.log('Home.jsx: Ensuring WebSocket connection...');
-          await connect();
-          console.log('Home.jsx: Connect function called');
-          
-          // Wait briefly for the connection event to trigger
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          console.log('📤 Home.jsx: Attempting to send message directly...');
-          
-          try {
-            const result = await sendMessage('hey who are you and what day is it');
-            console.log('📨 Home.jsx: Send message result:', result);
-            
-            if (!result) {
-              console.error('Home.jsx: Send message returned false, stopping loading');
-              setIsLoading(false);
-            }
-          } catch (error) {
-            console.error('Home.jsx: Error sending message:', error);
-            setIsLoading(false); // Stop loading on error
-          }
-        }, 500) // Show thinking after 500ms
-      } else {
-        setIsChatOpen(false)
-        setMessages([])
-        setCurrentResponse('')
-        setIsLoading(false)
-        setShowInput(false)
-        setUserInput('')
-      }
-    })
-  }, [setIsChatOpen, isConnected, connect, sendMessage])
+    console.log('🚀 Home.jsx: Auto-initializing chat on mount');
+    setIsLoading(false) // Don't show loading initially
+    setMessages([{
+      type: 'ai',
+      content: "Hey there, welcome to Olivia AI! Ask me about cryptocurrencies, trading, or anything Web3!"
+    }]) // Show instant greeting
+    setCurrentResponse('')
+    setShowInput(true) // Show input immediately
+    setUserInput('')
+  }, [])
+
+
 
   return (
-    <div className="flex flex-col gap-6 relative h-screen overflow-hidden">
+    <div className="flex flex-col gap-6 relative h-full w-full overflow-hidden bg-black">
+      
+      {/* WebSocket Status Debug (top-left) */}
+      <div className={`fixed top-4 left-4 text-white p-2 text-xs z-50 rounded ${
+        isConnected ? 'bg-green-600' : isConnecting ? 'bg-yellow-600' : 'bg-red-600'
+      }`}>
+        {isConnected ? '🟢 AI Connected' : 
+         isConnecting ? `🟡 Connecting... (${connectionAttempts}/10)` : 
+         `🔴 AI Offline`}
+        {import.meta.env.DEV && !isConnected && (
+          <div className="text-[10px] mt-1">
+            Endpoint: {currentEndpointIndex + 1}/{wsEndpoints?.length || 0}
+          </div>
+        )}
+      </div>
+      
+      {/* User ID Display */}
+      {(principal || userData?.user_id) && (
+        <div className="fixed top-4 right-4 bg-green-600 text-white p-2 text-xs z-50 rounded">
+          {isAuthenticated && principal ? 
+            `🔐 ${principal.slice(0, 8)}...${principal.slice(-8)}` :
+            `👤 ${userData?.user_id || 'Guest'}`
+          }
+        </div>
+      )}
       
       {/* Animated Particles Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -1045,9 +1300,8 @@ export default function Home() {
       </div>
 
       {/* Conversation Display - Just Above Input */}
-      {isChatOpen && (
-        <div className="flex-1 flex items-end justify-center px-4 relative z-10 pb-56">
-          <div className="text-center max-w-xl w-full">
+      <div className="flex-1 flex items-center justify-center px-4 relative z-10 pb-36" style={{marginBottom: '-120px'}}>
+        <div className="text-center max-w-xl w-full">
             
             {/* Chat Messages - Fade to black and disappear, positioned above input */}
             <div className="space-y-3 mb-6 overflow-hidden" style={{ maxHeight: '40vh' }}>
@@ -1073,34 +1327,46 @@ export default function Home() {
                       opacity: fadeOpacity
                     }}
                     dangerouslySetInnerHTML={{
-                      __html: msg.content
-                        // Convert markdown links [text](url) to HTML links with in-app browser
-                        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
-                          const cleanUrl = url.trim().replace(/[.,;!?]*$/, ''); // Remove trailing punctuation
-                          const escapedUrl = cleanUrl.replace(/'/g, '&#39;').replace(/"/g, '&quot;'); // Escape quotes properly
+                      __html: (() => {
+                        let content = msg.content;
+                        
+                        // First, convert markdown links [text](url) to HTML links
+                        content = content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+                          const cleanUrl = url.trim().replace(/[.,;!?]*$/, '');
                           const uniqueId = 'link_' + Math.random().toString(36).substr(2, 9);
-                          return `<a id="${uniqueId}" href="#" onclick="window.handleUrlClick && window.handleUrlClick('${escapedUrl}'); return false;" style="color: #31F46E; text-decoration: underline; cursor: pointer;">${text}</a>`;
-                        })
-                        // Convert plain URLs with protocol to clickable links
-                        .replace(/(^|[\s>])(https?:\/\/[a-zA-Z0-9](?:[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=])*[a-zA-Z0-9\-_~/#@$*+=])/g, (match, prefix, url) => {
-                          // Clean up URL - remove trailing punctuation that's likely sentence punctuation
-                          const cleanUrl = url.replace(/[.,;!?]+$/, '');
-                          const escapedUrl = cleanUrl.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-                          const uniqueId = 'link_' + Math.random().toString(36).substr(2, 9);
-                          return `${prefix}<a id="${uniqueId}" href="#" onclick="window.handleUrlClick && window.handleUrlClick('${escapedUrl}'); return false;" style="color: #31F46E; text-decoration: underline; cursor: pointer;">${cleanUrl}</a>`;
-                        })
-                        // Convert URLs without protocol (www.example.com, domain.com) to clickable links
-                        .replace(/(^|[\s>])((?:www\.)?[a-zA-Z0-9](?:[a-zA-Z0-9\-._]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}(?:\/[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=]*)?)/g, (match, prefix, url) => {
-                          // Skip if it's already part of a protocol URL or already a link
-                          if (match.includes('://') || match.includes('<a')) return match;
+                          return `<a id="${uniqueId}" href="#" data-url="${cleanUrl}" style="color: #31F46E; text-decoration: underline; cursor: pointer;">${text}</a>`;
+                        });
+                        
+                        // Create a temporary marker to avoid processing already converted links
+                        const linkMarker = '___CONVERTED_LINK___';
+                        content = content.replace(/<a[^>]*>.*?<\/a>/g, `${linkMarker}$&${linkMarker}`);
+                        
+                        // Convert URLs with protocol to clickable links (only if not already a link)
+                        content = content.replace(/(^|[^>]|[\s])(https?:\/\/[^\s<>]+)/g, (match, prefix, url) => {
+                          // Skip if we're inside a converted link
+                          if (match.includes(linkMarker)) return match;
                           
                           const cleanUrl = url.replace(/[.,;!?]+$/, '');
-                          // Add https:// if no protocol
-                          const fullUrl = cleanUrl.startsWith('http') ? cleanUrl : 'https://' + cleanUrl;
-                          const escapedUrl = fullUrl.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
                           const uniqueId = 'link_' + Math.random().toString(36).substr(2, 9);
-                          return `${prefix}<a id="${uniqueId}" href="#" onclick="window.handleUrlClick && window.handleUrlClick('${escapedUrl}'); return false;" style="color: #31F46E; text-decoration: underline; cursor: pointer;">${cleanUrl}</a>`;
-                        })
+                          return `${prefix}<a id="${uniqueId}" href="#" data-url="${cleanUrl}" style="color: #31F46E; text-decoration: underline; cursor: pointer;">${cleanUrl}</a>`;
+                        });
+                        
+                        // Convert URLs without protocol (www.example.com) to clickable links
+                        content = content.replace(/(^|[\s])(www\.[a-zA-Z0-9][a-zA-Z0-9\-._]*[a-zA-Z0-9]\.[a-zA-Z]{2,}(?:\/[^\s<>]*)?)/g, (match, prefix, url) => {
+                          // Skip if we're inside a converted link
+                          if (match.includes(linkMarker)) return match;
+                          
+                          const cleanUrl = url.replace(/[.,;!?]+$/, '');
+                          const fullUrl = 'https://' + cleanUrl;
+                          const uniqueId = 'link_' + Math.random().toString(36).substr(2, 9);
+                          return `${prefix}<a id="${uniqueId}" href="#" data-url="${fullUrl}" style="color: #31F46E; text-decoration: underline; cursor: pointer;">${cleanUrl}</a>`;
+                        });
+                        
+                        // Remove the link markers
+                        content = content.replace(new RegExp(linkMarker, 'g'), '');
+                        
+                        return content;
+                      })()
                     }}
                   >
                   </div>
@@ -1132,7 +1398,7 @@ export default function Home() {
             
             {/* Simple Input */}
             {showInput && (
-              <div className="fixed bottom-32 left-4 right-4 z-20">
+              <div className="fixed bottom-52 left-4 right-4 z-20">
                 <input
                   ref={inputRef}
                   type="text"
@@ -1148,7 +1414,6 @@ export default function Home() {
             )}
           </div>
         </div>
-      )}
       {/* Render all Lurky bubble instances */}
       {lurkyBubbles.map(bubble => (
         <FloatingLurkyBubble

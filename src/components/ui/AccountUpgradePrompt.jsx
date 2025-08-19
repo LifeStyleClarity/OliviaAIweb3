@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { useInternetIdentity } from '../../hooks/useInternetIdentity';
+import { useInternetIdentity } from '../../contexts/InternetIdentityContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import icpService from '../../api/services/icp.service';

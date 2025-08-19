@@ -133,7 +133,20 @@ export const coinstatsService = {
         'ldo': 'lido-dao',
         'lido': 'lido-dao',
         'rpl': 'rocket-pool',
-        'rocketpool': 'rocket-pool'
+        'rocketpool': 'rocket-pool',
+        // Missing trending coins from AI mentions
+        'cfx': 'conflux-token',
+        'conflux': 'conflux-token',
+        'pudgy': 'pudgy-penguins',
+        'pengu': 'pudgy-penguins',
+        'penguins': 'pudgy-penguins',
+        'ethena': 'ethena',
+        'ena': 'ethena',
+        'curve': 'curve-dao-token',
+        'crv': 'curve-dao-token',
+        'dao': 'curve-dao-token',
+        'omikami': 'omikami',
+        'rize': 'rize'
       };
       
       const coinId = coinMapping[query.toLowerCase()] || query.toLowerCase();

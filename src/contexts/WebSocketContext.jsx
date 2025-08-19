@@ -70,7 +70,10 @@ export const WebSocketProvider = ({ children }) => {
   // WebSocket endpoints to try (in order of preference)
   const wsBase = import.meta.env.VITE_WEBSOCKET_URL || 'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app';
   const WS_ENDPOINTS = [
-    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app/ws/agent/stream' // EXACT WebSocket endpoint for Olivia AI
+    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app/ws/agent/stream', // Primary endpoint
+    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app/ws', // Fallback 1
+    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app', // Fallback 2
+    'ws://localhost:8080/ws/agent/stream' // Local development fallback
   ];
   
   const [currentEndpointIndex, setCurrentEndpointIndex] = useState(0);
@@ -560,16 +563,35 @@ export const WebSocketProvider = ({ children }) => {
         error: error,
         readyState: wsRef.current?.readyState,
         attempt: connectionAttempts + 1,
+        endpointIndex: currentEndpointIndex,
+        totalEndpoints: WS_ENDPOINTS.length,
         message: 'Failed to connect to Olivia AI service'
       });
       setWsError(error);
       setIsConnected(false);
       setIsConnecting(false);
       
-      // Clear any pending reconnection timeouts to prevent loops
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
+      // Try next endpoint if available
+      if (currentEndpointIndex < WS_ENDPOINTS.length - 1 && isMounted) {
+        console.log(`🔌 Trying next WebSocket endpoint... (${currentEndpointIndex + 1}/${WS_ENDPOINTS.length - 1})`);
+        setCurrentEndpointIndex(prev => prev + 1);
+        
+        // Retry with next endpoint after short delay
+        setTimeout(() => {
+          if (isMounted && shouldReconnect) {
+            connectWebSocket();
+          }
+        }, 1000);
+      } else {
+        // All endpoints failed, clear timeout and reset
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
+        
+        // Reset to first endpoint for future attempts
+        setCurrentEndpointIndex(0);
+        console.error('🚨 All WebSocket endpoints failed. Service may be down.');
       }
     };
   }, [isConnecting, connectionAttempts, shouldReconnect, isServerUnavailable, currentEndpointIndex, handleWebSocketMessage]);

@@ -33,7 +33,7 @@ export default function BottomNavigation() {
 
       <div className="fixed bottom-0 left-0 right-0 z-40 ">
         {/* Olivia AI Logo Button - Bigger and Pulsing - Higher z-index */}
-        <div className="absolute left-1/2 -translate-x-1/2 -top-10 bg-[#0a0a0a] rounded-full border border-white/10 z-50">
+        <div className="absolute left-1/2 -translate-x-1/2 -top-32 bg-[#0a0a0a] rounded-full border border-white/10 z-50">
           <Button
             variant="ghost"
             className="w-20 h-20 min-w-20 p-0 flex flex-col items-center bg-[#0a0a0a] rounded-full olivia-pulse hover:animate-none"

@@ -1,6 +1,6 @@
 // src/pages/Login.jsx
 import { useAuth } from '../contexts/AuthContext';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { useInternetIdentity } from '../contexts/InternetIdentityContext';
 import Button from '../components/ui/Button';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -52,23 +52,18 @@ export default function Login() {
   // Handle Internet Identity login
   const handleInternetIdentityLogin = async () => {
     try {
-      const success = await internetIdentityLogin();
-      if (success) {
-        setIsGuestUser(false);
-        setUserAuthenticated(true);
-        navigate('/home');
-      }
+      await internetIdentityLogin();
     } catch (error) {
       console.error('Internet Identity login failed:', error);
     }
   };
 
-  // Auto-navigate if already authenticated with Internet Identity
+  // Watch for authentication success and navigate to app
   useEffect(() => {
-    if (isAuthenticated && principal) {
+    if (isAuthenticated && principal && !iiLoading) {
       setUserData({
         user_id: principal,
-        first_name: 'User',
+        first_name: 'User', 
         last_name: '',
         email: '',
         auth_method: 'internet_identity',
@@ -78,7 +73,7 @@ export default function Login() {
       setUserAuthenticated(true);
       navigate('/home');
     }
-  }, [isAuthenticated, principal, setUserData, setIsGuestUser, setUserAuthenticated, navigate]);
+  }, [isAuthenticated, principal, iiLoading, setUserData, setIsGuestUser, setUserAuthenticated, navigate]);
 
   return (
     <>
