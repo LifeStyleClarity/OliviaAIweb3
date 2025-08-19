@@ -21,7 +21,17 @@ const FloatingCoinStatsBubble = ({ isOpen, onClose, title = 'CoinStats', content
 
     const interval = setInterval(() => {
       setPosition(prev => {
-        const bubbleSize = isExpanded ? 200 : 128;
+        // Use same dynamic sizing as outside
+        let bubbleSize = 128;
+        if (isExpanded && typeof content === 'string') {
+          const lines = content.split('\n').length;
+          const avgLineLength = content.length / lines;
+          const estimatedWidth = Math.max(250, Math.min(400, avgLineLength * 8 + 100));
+          const estimatedHeight = Math.max(200, lines * 20 + 80);
+          bubbleSize = Math.max(estimatedWidth, estimatedHeight);
+        } else if (isExpanded) {
+          bubbleSize = 280;
+        }
         const margin = 20;
         
         // Simple upward floating - no hard stops
@@ -88,7 +98,7 @@ const FloatingCoinStatsBubble = ({ isOpen, onClose, title = 'CoinStats', content
   const createPopEffect = () => {
     if (!addParticlesToSwarm) return;
     
-    const bubbleSize = isExpanded ? 200 : 128;
+    // Use same dynamic sizing logic\n    let bubbleSize = 128;\n    if (isExpanded && typeof content === 'string') {\n      const lines = content.split('\\n').length;\n      const avgLineLength = content.length / lines;\n      const estimatedWidth = Math.max(250, Math.min(400, avgLineLength * 8 + 100));\n      const estimatedHeight = Math.max(200, lines * 20 + 80);\n      bubbleSize = Math.max(estimatedWidth, estimatedHeight);\n    } else if (isExpanded) {\n      bubbleSize = 280;\n    }
     const bubbleCenter = {
       x: position.x + bubbleSize / 2, // Actual bubble center
       y: position.y + bubbleSize / 2  // Actual bubble center
@@ -177,7 +187,18 @@ const FloatingCoinStatsBubble = ({ isOpen, onClose, title = 'CoinStats', content
 
   if (!isOpen) return null;
   
-  const bubbleSize = isExpanded ? 200 : 128;
+  // Dynamic bubble size based on content length and expanded state
+  let bubbleSize = 128; // Base collapsed size
+  if (isExpanded && typeof content === 'string') {
+    // Calculate size based on content length
+    const lines = content.split('\n').length;
+    const avgLineLength = content.length / lines;
+    const estimatedWidth = Math.max(250, Math.min(400, avgLineLength * 8 + 100));
+    const estimatedHeight = Math.max(200, lines * 20 + 80);
+    bubbleSize = Math.max(estimatedWidth, estimatedHeight);
+  } else if (isExpanded) {
+    bubbleSize = 280; // Default expanded size
+  }
   const bubbleWidth = bubbleSize;
   const bubbleHeight = bubbleSize;
   
@@ -241,7 +262,7 @@ const FloatingCoinStatsBubble = ({ isOpen, onClose, title = 'CoinStats', content
                       const firstLine = lines[0] || '';
                       let coinName = '';
                       
-                      // Extract coin name from patterns like "Bitcoin (BTC)" or "Bitcoin (BTC) - Mentioned by AI"
+                      // Extract coin name from patterns like "Bitcoin (BTC)" or "Bitcoin (BTC) - Olivia thought"
                       const nameMatch = firstLine.match(/^([^(]+)\s*\([^)]+\)/);
                       if (nameMatch) {
                         coinName = nameMatch[1].trim();
@@ -267,8 +288,8 @@ const FloatingCoinStatsBubble = ({ isOpen, onClose, title = 'CoinStats', content
                 </div>
               ) : (
                 // Expanded: Show all details
-                <div className="text-xs leading-relaxed break-words w-full h-full overflow-hidden px-4 py-3 flex items-center justify-center">
-                  <div className="text-center max-w-full max-h-full overflow-y-auto">
+                <div className="text-xs leading-relaxed break-words w-full h-full px-4 py-3 flex items-center justify-center">
+                  <div className="text-center">
                     {typeof content === 'string' ? (
                       <div className="whitespace-pre-wrap font-medium">
                         {content}

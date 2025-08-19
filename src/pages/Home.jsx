@@ -276,209 +276,160 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [isLoading])
 
-  // Parse AI responses for coin mentions and show bubbles
+  // Parse AI responses for coin mentions and show bubbles - DYNAMIC EXTRACTION
   const parseAIResponseForCoins = useCallback(async (aiMessage) => {
-    console.log('🤖 Parsing AI response for coin mentions:', aiMessage)
+    console.log('🤖 AI Agent: Extracting potential tokens from:', aiMessage)
     
-    // Known cryptocurrencies and common variations (same as user message parsing)
-    const knownCryptos = [
-      'bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'cardano', 'ada',
-      'polygon', 'matic', 'dogecoin', 'doge', 'chainlink', 'link', 'litecoin', 'ltc',
-      'polkadot', 'dot', 'avalanche', 'avax', 'cosmos', 'atom', 'uniswap', 'uni',
-      'shiba', 'shib', 'pepe', 'bonk', 'popcat', 'wif', 'ton', 'usdt', 'usdc',
-      'bnb', 'xrp', 'ripple', 'stellar', 'xlm', 'vechain', 'vet', 'tron', 'trx',
-      'icp', 'hbar', 'hedera', 'near', 'algo', 'algorand', 'fil', 'filecoin',
-      'omikami', 'rize', 'sui', 'apt', 'aptos', 'injective', 'inj', 'render', 'rndr',
-      'theta', 'mana', 'decentraland', 'sand', 'sandbox', 'axs', 'axie',
-      'cfx', 'conflux', 'pudgy', 'penguins', 'ethena', 'curve', 'dao', 'crv'
-    ];
-    
-    // Extract potential coin names from AI response
-    const words = aiMessage.toLowerCase().match(/\b[a-zA-Z]{2,}\b/g) || [];
-    let mentionedCoins = words.filter(word => knownCryptos.includes(word));
-    
-    // Also check for compound coin names like "Pudgy Penguins", "Curve DAO"
-    const compoundPatterns = [
-      /pudgy\s+penguins?/gi,
-      /curve\s+dao/gi,
-      /bonk\s+inu?/gi
-    ];
-    
-    for (const pattern of compoundPatterns) {
-      const matches = aiMessage.match(pattern);
-      if (matches) {
-        matches.forEach(match => {
-          const cleanMatch = match.toLowerCase().replace(/\s+/g, '').replace(/s$/, ''); // remove spaces and plurals
-          if (cleanMatch === 'pudgypenguins' || cleanMatch === 'pudgypenguin') {
-            mentionedCoins.push('pudgy');
-          } else if (cleanMatch === 'curvedao') {
-            mentionedCoins.push('curve');
-          } else if (cleanMatch === 'bonkinu' || cleanMatch === 'bonkin') {
-            mentionedCoins.push('bonk');
-          }
+    // SMART TOKEN EXTRACTION - No hardcoded lists!
+    const extractPotentialTokens = (text) => {
+      const candidates = new Set();
+      
+      // Pattern 1: Capitalized words (likely token names) - HYPE, ONDO, FLOKI
+      const capitalizedWords = text.match(/\b[A-Z][A-Z]+\b/g) || [];
+      capitalizedWords.forEach(word => {
+        if (word.length >= 3 && word.length <= 8) { // reasonable token length
+          candidates.add(word.toLowerCase());
+        }
+      });
+      
+      // Pattern 2: Common token patterns with parentheses - Bitcoin (BTC), Solana (SOL)
+      const parenthesesTokens = text.match(/\(([A-Z]{2,6})\)/g) || [];
+      parenthesesTokens.forEach(match => {
+        const token = match.replace(/[()]/g, '');
+        candidates.add(token.toLowerCase());
+      });
+      
+      // Pattern 3: Words ending in typical token suffixes
+      const tokenSuffixWords = text.match(/\b\w*(?:coin|token|protocol|network|finance|liquid|inu)\b/gi) || [];
+      tokenSuffixWords.forEach(word => {
+        if (word.length >= 4 && word.length <= 15) {
+          candidates.add(word.toLowerCase());
+        }
+      });
+      
+      // Pattern 4: Compound token names - "Ocean Protocol", "Pudgy Penguins"
+      const compoundTokens = text.match(/\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/g) || [];
+      compoundTokens.forEach(compound => {
+        // Try both the compound and individual words
+        candidates.add(compound.toLowerCase().replace(/\s+/g, ''));
+        const words = compound.toLowerCase().split(/\s+/);
+        words.forEach(word => {
+          if (word.length >= 3) candidates.add(word);
         });
-      }
-    }
-    
-    // Remove duplicates and consolidate same tokens (e.g., polygon/matic, bitcoin/btc)
-    const coinGroups = {
-      'polygon': ['polygon', 'matic'],
-      'bitcoin': ['bitcoin', 'btc'], 
-      'ethereum': ['ethereum', 'eth'],
-      'solana': ['solana', 'sol'],
-      'cardano': ['cardano', 'ada'],
-      'chainlink': ['chainlink', 'link'],
-      'dogecoin': ['dogecoin', 'doge'],
-      'shiba': ['shiba', 'shib'],
-      'ripple': ['ripple', 'xrp'],
-      'binance': ['binance', 'bnb'],
-      'uniswap': ['uniswap', 'uni'],
-      'avalanche': ['avalanche', 'avax'],
-      'polkadot': ['polkadot', 'dot'],
-      'cosmos': ['cosmos', 'atom'],
-      'algorand': ['algorand', 'algo'],
-      'curve': ['curve', 'crv', 'dao'],
-      'pudgy': ['pudgy', 'penguins', 'pengu'],
-      'conflux': ['conflux', 'cfx'],
-      'ethena': ['ethena', 'ena']
+      });
+      
+      // Pattern 5: Well-known major tokens (minimal hardcoded list for common ones)
+      const majorTokens = ['bitcoin', 'ethereum', 'solana', 'cardano', 'polygon', 'avalanche', 'chainlink'];
+      const words = text.toLowerCase().match(/\b[a-z]{3,}\b/g) || [];
+      words.forEach(word => {
+        if (majorTokens.includes(word)) {
+          candidates.add(word);
+        }
+      });
+      
+      return Array.from(candidates);
     };
     
-    // Consolidate coins to avoid duplicates
-    const consolidatedCoins = [];
-    const processedGroups = new Set();
+    // Extract all potential token candidates
+    const potentialTokens = extractPotentialTokens(aiMessage);
+    console.log('🔍 AI Agent found potential tokens:', potentialTokens);
     
-    for (const coin of mentionedCoins) {
-      let foundGroup = false;
-      
-      // Check if this coin belongs to a group
-      for (const [mainCoin, variants] of Object.entries(coinGroups)) {
-        if (variants.includes(coin.toLowerCase()) && !processedGroups.has(mainCoin)) {
-          consolidatedCoins.push(mainCoin);
-          processedGroups.add(mainCoin);
-          foundGroup = true;
-          break;
+    // DYNAMIC API VALIDATION - Test each candidate against CoinStats API
+    const validatedTokens = [];
+    const maxTokensToTest = 6; // Limit to avoid spam
+    const tokensToTest = potentialTokens.slice(0, maxTokensToTest);
+    
+    console.log('🧪 AI Agent: Testing tokens against CoinStats API...', tokensToTest);
+    
+    // Test each potential token in parallel
+    const validationPromises = tokensToTest.map(async (token) => {
+      try {
+        console.log(`🔎 Testing token: ${token}`);
+        const searchData = await coinstatsService.searchCoins(token);
+        
+        if (searchData.result && searchData.result.length > 0) {
+          const coinData = searchData.result[0]; // Get best match
+          console.log(`✅ Found valid token: ${token} -> ${coinData.name} (${coinData.symbol})`);
+          return {
+            searchTerm: token,
+            coinData: coinData,
+            isValid: true
+          };
+        } else {
+          console.log(`❌ Token not found in CoinStats: ${token}`);
+          return { searchTerm: token, isValid: false };
         }
+      } catch (error) {
+        console.log(`⚠️ API error testing token ${token}:`, error);
+        return { searchTerm: token, isValid: false };
       }
+    });
+    
+    // Wait for all validations to complete
+    const validationResults = await Promise.all(validationPromises);
+    const validTokens = validationResults.filter(result => result.isValid);
+    
+    console.log('🎯 AI Agent: Valid tokens found:', validTokens.map(t => `${t.searchTerm} -> ${t.coinData?.name}`));
+    
+    // Process each validated token (limit to first 4 to avoid spam)
+    const tokensToProcess = validTokens.slice(0, 4);
+    
+    for (const tokenResult of tokensToProcess) {
+      const { searchTerm, coinData } = tokenResult;
+      console.log(`🚀 Creating bubble for validated token: ${searchTerm} -> ${coinData.name}`);
       
-      // If not in any group, add it directly (but avoid duplicates)
-      if (!foundGroup && !consolidatedCoins.includes(coin.toLowerCase())) {
-        consolidatedCoins.push(coin.toLowerCase());
-      }
-    }
-    
-    const uniqueCoins = consolidatedCoins;
-    console.log('🪙 AI mentioned coins (consolidated):', uniqueCoins);
-    
-    // Process each mentioned coin (limit to first 3 to avoid spam)
-    const coinsToProcess = uniqueCoins.slice(0, 3);
-    
-    for (const coin of coinsToProcess) {
-      console.log(`🔍 Processing AI-mentioned coin: ${coin}`);
-      
-      // Create CoinStats bubble for this coin (better for trending/new coins)
-      const coinName = coin.charAt(0).toUpperCase() + coin.slice(1);
+      // Create CoinStats bubble for this validated token
+      const coinName = coinData.name;
       const coinStatsBubble = {
         id: Date.now() + Math.random() + Math.random(), // Extra unique ID
-        title: `${coinName} (AI Mention) - CoinStats`,
-        content: `Loading ${coinName} live data from AI mention...`,
+        title: `${coinName} (Olivia thought) - CoinStats`,
+        content: `Loading ${coinName} live data from Olivia's suggestion...`,
         loading: true
       };
       
       setCoinstatsBubbles(prev => [...prev, coinStatsBubble]);
       
-      // Map coin names to better search terms for CoinStats API
-      let searchTerm = coin;
-      const coinMappings = {
-        'cfx': 'conflux',
-        'pudgy': 'pengu', // Pudgy Penguins token symbol
-        'penguins': 'pengu',
-        'curve': 'crv',
-        'dao': 'crv', // Curve DAO
-        'ethena': 'ena',
-        'bonk': 'bonk',
-        'btc': 'bitcoin',
-        'bitcoin': 'bitcoin',
-        'eth': 'ethereum',
-        'ethereum': 'ethereum',
-        'sol': 'solana',
-        'solana': 'solana',
-        'icp': 'internet-computer', // Internet Computer
-        'internet-computer': 'internet-computer',
-        'dfinity': 'internet-computer'
-      };
+      // We already have the coin data from validation, so format it for display
+      const change = coinData.priceChange1d || 0;
+      const changeDirection = change > 0 ? '+' : '';
+      const price = coinData.price > 1000 ? `${(coinData.price/1000).toFixed(2)}k` : 
+                   coinData.price > 1 ? coinData.price.toFixed(2) : 
+                   coinData.price > 0.01 ? coinData.price.toFixed(4) :
+                   coinData.price.toFixed(8);
+      const marketCap = coinData.marketCap ? `$${(coinData.marketCap/1e9).toFixed(2)}B` : 'N/A';
+      const volume = coinData.volume ? `$${(coinData.volume/1e6).toFixed(1)}M` : 'N/A';
       
-      if (coinMappings[coin.toLowerCase()]) {
-        searchTerm = coinMappings[coin.toLowerCase()];
-        console.log(`🔄 Mapped ${coin} to ${searchTerm} for better search results`);
-      }
+      let marketText = `${coinData.name} (${coinData.symbol}) - Olivia thought\n\n`;
+      marketText += `Price: $${price}\n`;
+      marketText += `24h: ${changeDirection}${change.toFixed(2)}%\n`;
+      marketText += `Market Cap: ${marketCap}\n`;
+      marketText += `Volume: ${volume}\n`;
+      marketText += `Rank: #${coinData.rank || 'N/A'}\n\n`;
+      marketText += `Successfully loaded`;
       
-      // Simple CoinStats API call
-      try {
-        const searchData = await coinstatsService.searchCoins(searchTerm);
-          
-          if (searchData.result && searchData.result.length > 0) {
-            const coinData = searchData.result[0]; // Get first/best match
-            const change = coinData.priceChange1d || 0;
-            const changeDirection = change > 0 ? '+' : '';
-            const price = coinData.price > 1000 ? `${(coinData.price/1000).toFixed(2)}k` : 
-                         coinData.price > 1 ? coinData.price.toFixed(2) : 
-                         coinData.price > 0.01 ? coinData.price.toFixed(4) :
-                         coinData.price.toFixed(8);
-            const marketCap = coinData.marketCap ? `$${(coinData.marketCap/1e9).toFixed(2)}B` : 'N/A';
-            const volume = coinData.volume ? `$${(coinData.volume/1e6).toFixed(1)}M` : 'N/A';
-            
-            let marketText = `${coinData.name} (${coinData.symbol}) - Mentioned by AI\n\n`;
-            marketText += `Price: $${price}\n`;
-            marketText += `24h: ${changeDirection}${change.toFixed(2)}%\n`;
-            marketText += `Market Cap: ${marketCap}\n`;
-            marketText += `Volume: ${volume}\n`;
-            marketText += `Rank: #${coinData.rank || 'N/A'}\n\n`;
-            marketText += `Successfully loaded`;
-            
-            // Update context awareness with CoinStats data
-            updateContextAwareness('market_data', coin.toLowerCase(), {
-              source: 'CoinStats (AI Mention)',
-              name: coinData.name,
-              symbol: coinData.symbol,
-              price: coinData.price,
-              change_24h: coinData.priceChange1d,
-              market_cap: coinData.marketCap,
-              volume_24h: coinData.volume,
-              rank: coinData.rank,
-              mentioned_by_ai: true
-            });
-            
-            // Update the bubble with live data
-            setCoinstatsBubbles(prev => prev.map(bubble => 
-              bubble.id === coinStatsBubble.id 
-                ? { ...bubble, content: marketText, loading: false }
-                : bubble
-            ));
-            
-          } else {
-            // Not found - simple error message
-            const notFoundText = `${coinName} - AI Mention\n\n❌ Not found in CoinStats\n\nCheck manually on exchanges`;
-            
-            setCoinstatsBubbles(prev => prev.map(bubble => 
-              bubble.id === coinStatsBubble.id 
-                ? { ...bubble, content: notFoundText, loading: false }
-                : bubble
-            ));
-          }
-        
-      } catch (error) {
-        console.error(`CoinStats error for ${coin}:`, error);
-        const errorText = `${coinName} - AI Mention\n\n⚠️ API Error\n\nTry again later`;
-        
-        setCoinstatsBubbles(prev => prev.map(bubble => 
-          bubble.id === coinStatsBubble.id 
-            ? { ...bubble, content: errorText, loading: false }
-            : bubble
-        ));
-      }
+      // Update context awareness with CoinStats data
+      updateContextAwareness('market_data', searchTerm.toLowerCase(), {
+        source: 'CoinStats (Olivia thought)',
+        name: coinData.name,
+        symbol: coinData.symbol,
+        price: coinData.price,
+        change_24h: coinData.priceChange1d,
+        market_cap: coinData.marketCap,
+        volume_24h: coinData.volume,
+        rank: coinData.rank,
+        mentioned_by_olivia: true,
+        discovered_by_ai: true
+      });
       
-      // Small delay between coin lookups to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 750));
+      // Update the bubble with live data
+      setCoinstatsBubbles(prev => prev.map(bubble => 
+        bubble.id === coinStatsBubble.id 
+          ? { ...bubble, content: marketText, loading: false }
+          : bubble
+      ));
+      
+      // Small delay between token lookups to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }, [updateContextAwareness]);
 

@@ -22,7 +22,7 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
 
     const interval = setInterval(() => {
       setPosition(prev => {
-        const bubbleSize = isExpanded ? 400 : 128; // Even bigger when expanded to fit all Lurky social data
+        // Use same dynamic sizing as outside\n        let bubbleSize = 128;\n        if (isExpanded && typeof content === 'string') {\n          const lines = content.split('\\n').length;\n          const avgLineLength = content.length / lines;\n          const estimatedWidth = Math.max(300, Math.min(500, avgLineLength * 8 + 120));\n          const estimatedHeight = Math.max(250, lines * 22 + 100);\n          bubbleSize = Math.max(estimatedWidth, estimatedHeight);\n        } else if (isExpanded) {\n          bubbleSize = 350;\n        }
         const margin = 20;
         
         // Simple upward floating - no hard stops
@@ -89,7 +89,7 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
   const createPopEffect = () => {
     if (!addParticlesToSwarm) return;
     
-    const bubbleSize = isExpanded ? 400 : 128; // Even bigger when expanded
+    // Use same dynamic sizing logic\n    let bubbleSize = 128;\n    if (isExpanded && typeof content === 'string') {\n      const lines = content.split('\\n').length;\n      const avgLineLength = content.length / lines;\n      const estimatedWidth = Math.max(300, Math.min(500, avgLineLength * 8 + 120));\n      const estimatedHeight = Math.max(250, lines * 22 + 100);\n      bubbleSize = Math.max(estimatedWidth, estimatedHeight);\n    } else if (isExpanded) {\n      bubbleSize = 350;\n    }
     const bubbleCenter = {
       x: position.x + bubbleSize / 2, // Actual bubble center
       y: position.y + bubbleSize / 2  // Actual bubble center
@@ -179,7 +179,18 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
 
   if (!isOpen) return null;
   
-  const bubbleSize = isExpanded ? 400 : 128; // Even bigger when expanded for all Lurky data
+  // Dynamic bubble size based on content length and expanded state
+  let bubbleSize = 128; // Base collapsed size
+  if (isExpanded && typeof content === 'string') {
+    // Calculate size based on content length
+    const lines = content.split('\n').length;
+    const avgLineLength = content.length / lines;
+    const estimatedWidth = Math.max(300, Math.min(500, avgLineLength * 8 + 120));
+    const estimatedHeight = Math.max(250, lines * 22 + 100);
+    bubbleSize = Math.max(estimatedWidth, estimatedHeight);
+  } else if (isExpanded) {
+    bubbleSize = 350; // Default expanded size
+  }
   const bubbleWidth = bubbleSize;
   const bubbleHeight = bubbleSize;
   
@@ -251,8 +262,8 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
                 </div>
               ) : (
                 // Expanded: Show all details
-                <div className="text-xs leading-relaxed break-words w-full h-full overflow-hidden px-4 py-3 flex items-center justify-center">
-                  <div className="text-center max-w-full max-h-full overflow-y-auto">
+                <div className="text-xs leading-relaxed break-words w-full h-full px-4 py-3 flex items-center justify-center">
+                  <div className="text-center">
                     {typeof content === 'string' ? (
                       <ReactMarkdown 
                         className="prose prose-invert max-w-none prose-p:text-white prose-p:text-xs prose-p:leading-relaxed prose-p:my-1 prose-pre:text-xs prose-pre:bg-black/20 prose-pre:p-2 prose-pre:rounded prose-pre:text-white prose-pre:border prose-pre:border-green-400/30 prose-p:text-center"

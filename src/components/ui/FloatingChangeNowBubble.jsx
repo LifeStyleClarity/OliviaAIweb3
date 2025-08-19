@@ -21,7 +21,7 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
 
     const interval = setInterval(() => {
       setPosition(prev => {
-        const bubbleSize = isExpanded ? 350 : 180; // Bigger to fit ChangeNOW content
+        // Use same dynamic sizing as outside\n        let bubbleSize = 180;\n        if (isExpanded && typeof content === 'string') {\n          const lines = content.split('\\n').length;\n          const avgLineLength = content.length / lines;\n          const estimatedWidth = Math.max(280, Math.min(400, avgLineLength * 8 + 120));\n          const estimatedHeight = Math.max(220, lines * 20 + 100);\n          bubbleSize = Math.max(estimatedWidth, estimatedHeight);\n        } else if (isExpanded) {\n          bubbleSize = 320;\n        }
         const margin = 20;
         
         // Simple upward floating 
@@ -82,7 +82,7 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
   const createPopEffect = () => {
     if (!addParticlesToSwarm) return;
     
-    const bubbleSize = isExpanded ? 350 : 180;
+    // Use same dynamic sizing logic\n    let bubbleSize = 180;\n    if (isExpanded && typeof content === 'string') {\n      const lines = content.split('\\n').length;\n      const avgLineLength = content.length / lines;\n      const estimatedWidth = Math.max(280, Math.min(400, avgLineLength * 8 + 120));\n      const estimatedHeight = Math.max(220, lines * 20 + 100);\n      bubbleSize = Math.max(estimatedWidth, estimatedHeight);\n    } else if (isExpanded) {\n      bubbleSize = 320;\n    }
     const bubbleCenter = {
       x: position.x + bubbleSize / 2, // Actual bubble center
       y: position.y + bubbleSize / 2  // Actual bubble center
@@ -173,7 +173,18 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
 
   if (!isOpen) return null;
 
-  const bubbleSize = isExpanded ? 350 : 180; // Bigger to fit ChangeNOW content
+  // Dynamic bubble size based on content length and expanded state
+  let bubbleSize = 180; // Base collapsed size (larger for ChangeNOW)
+  if (isExpanded && typeof content === 'string') {
+    // Calculate size based on content length
+    const lines = content.split('\n').length;
+    const avgLineLength = content.length / lines;
+    const estimatedWidth = Math.max(280, Math.min(400, avgLineLength * 8 + 120));
+    const estimatedHeight = Math.max(220, lines * 20 + 100);
+    bubbleSize = Math.max(estimatedWidth, estimatedHeight);
+  } else if (isExpanded) {
+    bubbleSize = 320; // Default expanded size
+  }
 
   const bubble = (
     <div
@@ -245,9 +256,11 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
               ) : (
                 // Expanded: Show all details + action button
                 <div className="w-full h-full flex flex-col">
-                  <div className="text-xs leading-relaxed break-words w-full flex-1 overflow-y-auto px-2 py-1">
-                    <div className="whitespace-pre-wrap font-medium">
-                      {content}
+                  <div className="text-xs leading-relaxed break-words w-full flex-1 px-4 py-3 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="whitespace-pre-wrap font-medium">
+                        {content}
+                      </div>
                     </div>
                   </div>
                   {/* Swap button - only show when expanded */}

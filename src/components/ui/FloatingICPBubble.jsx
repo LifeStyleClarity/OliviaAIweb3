@@ -21,7 +21,18 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
 
     const interval = setInterval(() => {
       setPosition(prev => {
-        const bubbleSize = isExpanded ? 200 : 128;
+        // Dynamic bubble size based on content length and expanded state
+        let bubbleSize = 128; // Base collapsed size
+        if (isExpanded && typeof content === 'string') {
+          // Calculate size based on content length
+          const lines = content.split('\n').length;
+          const avgLineLength = content.length / lines;
+          const estimatedWidth = Math.max(250, Math.min(350, avgLineLength * 8 + 100));
+          const estimatedHeight = Math.max(200, lines * 20 + 80);
+          bubbleSize = Math.max(estimatedWidth, estimatedHeight);
+        } else if (isExpanded) {
+          bubbleSize = 250; // Default expanded size
+        }
         const margin = 20;
         
         // Simple upward floating - no hard stops
@@ -88,7 +99,18 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
   const createPopEffect = () => {
     if (!addParticlesToSwarm) return;
     
-    const bubbleSize = isExpanded ? 200 : 128;
+    // Dynamic bubble size based on content length and expanded state
+    let bubbleSize = 128; // Base collapsed size
+    if (isExpanded && typeof content === 'string') {
+      // Calculate size based on content length
+      const lines = content.split('\n').length;
+      const avgLineLength = content.length / lines;
+      const estimatedWidth = Math.max(250, Math.min(350, avgLineLength * 8 + 100));
+      const estimatedHeight = Math.max(200, lines * 20 + 80);
+      bubbleSize = Math.max(estimatedWidth, estimatedHeight);
+    } else if (isExpanded) {
+      bubbleSize = 250; // Default expanded size
+    }
     const bubbleCenter = {
       x: position.x + bubbleSize / 2, // Actual bubble center
       y: position.y + bubbleSize / 2  // Actual bubble center
@@ -274,8 +296,8 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
                 </div>
               ) : (
                 // Expanded: Show all details
-                <div className="text-xs leading-relaxed break-words w-full h-full overflow-hidden px-4 py-3 flex items-center justify-center">
-                  <div className="text-center max-w-full max-h-full overflow-y-auto">
+                <div className="text-xs leading-relaxed break-words w-full h-full px-4 py-3 flex items-center justify-center">
+                  <div className="text-center">
                     <div className="whitespace-pre-wrap font-medium">
                       {content}
                     </div>

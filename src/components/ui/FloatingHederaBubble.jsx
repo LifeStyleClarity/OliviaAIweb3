@@ -20,7 +20,7 @@ const FloatingHederaBubble = ({ isOpen, onClose, title = 'Hedera', content = '',
 
     const interval = setInterval(() => {
       setPosition(prev => {
-        const bubbleSize = isExpanded ? 280 : 128; // Increased expanded size
+        // Use same dynamic sizing as outside\n        let bubbleSize = 128;\n        if (isExpanded && typeof content === 'string') {\n          const lines = content.split('\\n').length;\n          const avgLineLength = content.length / lines;\n          const estimatedWidth = Math.max(250, Math.min(380, avgLineLength * 8 + 100));\n          const estimatedHeight = Math.max(200, lines * 20 + 80);\n          bubbleSize = Math.max(estimatedWidth, estimatedHeight);\n        } else if (isExpanded) {\n          bubbleSize = 280;\n        }
         const margin = 20;
         
         // Simple upward floating - no hard stops
@@ -134,7 +134,18 @@ const FloatingHederaBubble = ({ isOpen, onClose, title = 'Hedera', content = '',
 
     if (!isOpen) return null;
 
-  const bubbleSize = isExpanded ? 280 : 128; // Increased expanded size
+  // Dynamic bubble size based on content length and expanded state
+  let bubbleSize = 128; // Base collapsed size
+  if (isExpanded && typeof content === 'string') {
+    // Calculate size based on content length
+    const lines = content.split('\n').length;
+    const avgLineLength = content.length / lines;
+    const estimatedWidth = Math.max(250, Math.min(380, avgLineLength * 8 + 100));
+    const estimatedHeight = Math.max(200, lines * 20 + 80);
+    bubbleSize = Math.max(estimatedWidth, estimatedHeight);
+  } else if (isExpanded) {
+    bubbleSize = 280; // Default expanded size
+  }
   const bubbleWidth = bubbleSize;
   const bubbleHeight = bubbleSize;
   
@@ -207,8 +218,8 @@ const FloatingHederaBubble = ({ isOpen, onClose, title = 'Hedera', content = '',
                 </div>
               ) : (
                 // Expanded: Show all details
-                <div className="text-xs leading-relaxed break-words w-full h-full overflow-hidden px-4 py-3 flex items-center justify-center">
-                  <div className="text-center max-w-full max-h-full overflow-y-auto">
+                <div className="text-xs leading-relaxed break-words w-full h-full px-4 py-3 flex items-center justify-center">
+                  <div className="text-center">
                     <div className="whitespace-pre-wrap font-medium">
                       {content}
                     </div>
