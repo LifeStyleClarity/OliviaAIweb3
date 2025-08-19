@@ -5,6 +5,8 @@ import { AuthClient } from '@dfinity/auth-client';
 const InternetIdentityContext = createContext(null);
 
 export function InternetIdentityProvider({ children }) {
+  console.log('🔐 InternetIdentityProvider: Starting initialization...');
+  
   const [authClient, setAuthClient] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [identity, setIdentity] = useState(null);
@@ -12,6 +14,8 @@ export function InternetIdentityProvider({ children }) {
   const [isLoading, setIsLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const initializingRef = useRef(false);
+  
+  console.log('🔐 InternetIdentityProvider: State initialized');
 
   // Initialize auth client ONCE for the entire app
   const initializeAuthClient = async () => {

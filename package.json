@@ -4,10 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "./auto-dev.sh",
+    "dev:frontend-only": "vite --port 3000",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "icp:start": "cd icp_backend && dfx start --background",
+    "icp:stop": "cd icp_backend && dfx stop",
+    "icp:deploy": "cd icp_backend && dfx deploy",
+    "icp:status": "cd icp_backend && dfx canister status --all",
+    "icp:clean": "cd icp_backend && dfx stop && rm -rf .dfx && dfx start --clean --background",
+    "setup": "./dev-setup.sh"
   },
   "dependencies": {
     "@dfinity/agent": "^2.4.1",

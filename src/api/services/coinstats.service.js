@@ -146,7 +146,11 @@ export const coinstatsService = {
         'crv': 'curve-dao-token',
         'dao': 'curve-dao-token',
         'omikami': 'omikami',
-        'rize': 'rize'
+        'rize': 'rize',
+        // Internet Computer
+        'icp': 'internet-computer',
+        'internet-computer': 'internet-computer',
+        'dfinity': 'internet-computer'
       };
       
       const coinId = coinMapping[query.toLowerCase()] || query.toLowerCase();

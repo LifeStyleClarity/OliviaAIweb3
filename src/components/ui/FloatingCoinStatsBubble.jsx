@@ -29,7 +29,7 @@ const FloatingCoinStatsBubble = ({ isOpen, onClose, title = 'CoinStats', content
         let newX = prev.x;
         
         // Always try to float up (like a balloon)
-        const floatForce = -0.5; // Gentle upward force
+        const floatForce = -1.0; // Faster upward force (2x speed)
         newY += floatForce;
         
         // Stop at top of screen naturally
@@ -218,25 +218,67 @@ const FloatingCoinStatsBubble = ({ isOpen, onClose, title = 'CoinStats', content
         </button>
         
         {/* Content area */}
-        <div className="flex-1 p-0.5 pt-6 overflow-hidden flex items-center justify-center relative z-10">
+        <div className="flex-1 pt-6 pb-2 px-1 overflow-hidden flex items-center justify-center relative z-10">
           {loading ? (
-            <div className={`${isExpanded ? 'text-sm' : 'text-[8px]'} text-white font-medium animate-pulse text-center`}>
-              <div className="flex items-center gap-0.5 justify-center">
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`}></div>
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`} style={{animationDelay: '0.1s'}}></div>
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`} style={{animationDelay: '0.2s'}}></div>
+            <div className="text-white font-medium animate-pulse text-center">
+              <div className="flex items-center gap-1 justify-center mb-1">
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
               </div>
-              <div className="mt-0.5">Loading</div>
+              <div className="text-xs font-semibold">Loading</div>
             </div>
           ) : (
-            <div className={`text-white ${isExpanded ? 'text-sm' : 'text-[8px]'} leading-[1] break-words w-full h-full overflow-hidden text-center flex items-center justify-center`}>
-              {typeof content === 'string' ? (
-                <div className="max-h-full overflow-hidden whitespace-pre-wrap font-mono font-bold">
-                  {content}
+            <div className="text-white w-full h-full flex items-center justify-center text-center">
+                            {!isExpanded ? (
+                // Collapsed: Show coin name + price
+                <div className="text-xs font-bold leading-tight px-2">
+                  {(() => {
+                    if (typeof content === 'string') {
+                      const lines = content.split('\n').filter(line => line.trim());
+                      
+                      // Try to extract coin name from first line
+                      const firstLine = lines[0] || '';
+                      let coinName = '';
+                      
+                      // Extract coin name from patterns like "Bitcoin (BTC)" or "Bitcoin (BTC) - Mentioned by AI"
+                      const nameMatch = firstLine.match(/^([^(]+)\s*\([^)]+\)/);
+                      if (nameMatch) {
+                        coinName = nameMatch[1].trim();
+                      }
+                      
+                      // Find price line
+                      const priceLine = lines.find(line => 
+                        line.includes('Price:') && line.includes('$')
+                      );
+                      
+                      if (coinName && priceLine) {
+                        // Extract price from "Price: $X.XX" format
+                        const priceMatch = priceLine.match(/Price:\s*\$([\d,\.]+[kK]?)/i);
+                        const price = priceMatch ? `$${priceMatch[1]}` : priceLine.replace('Price:', '').trim();
+                        return `${coinName} - ${price}`;
+                      }
+                      
+                      // Fallback to price line or first line
+                      return priceLine || firstLine || content.substring(0, 30) + '...';
+                    }
+                    return 'Click to expand';
+                  })()} 
                 </div>
               ) : (
-                <div className={`text-white ${isExpanded ? 'text-sm' : 'text-[8px]'} break-words leading-[1] font-mono max-h-full overflow-hidden`}>
-                  {JSON.stringify(content, null, 1)}
+                // Expanded: Show all details
+                <div className="text-xs leading-relaxed break-words w-full h-full overflow-hidden px-4 py-3 flex items-center justify-center">
+                  <div className="text-center max-w-full max-h-full overflow-y-auto">
+                    {typeof content === 'string' ? (
+                      <div className="whitespace-pre-wrap font-medium">
+                        {content}
+                      </div>
+                    ) : (
+                      <div className="font-mono font-medium">
+                        {JSON.stringify(content, null, 2)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

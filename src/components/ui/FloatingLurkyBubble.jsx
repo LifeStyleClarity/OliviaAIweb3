@@ -30,7 +30,7 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
         let newX = prev.x;
         
         // Always try to float up (like a balloon)
-        const floatForce = -0.9; // Gentle upward force
+        const floatForce = -1.8; // Faster upward force (2x speed)
         newY += floatForce;
         
         // Stop at top of screen naturally
@@ -224,29 +224,47 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
         </button>
         
         {/* Content area */}
-        <div className={`flex-1 p-2 pt-8 ${isExpanded ? 'overflow-y-auto' : 'overflow-hidden'} flex items-center justify-center relative z-10`}>
+        <div className="flex-1 pt-6 pb-2 px-1 overflow-hidden flex items-center justify-center relative z-10">
           {loading ? (
-            <div className={`${isExpanded ? 'text-sm' : 'text-[8px]'} text-white font-medium animate-pulse text-center`}>
-              <div className="flex items-center gap-1 justify-center">
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-1 h-1'} bg-white rounded-full animate-bounce`}></div>
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-1 h-1'} bg-white rounded-full animate-bounce`} style={{animationDelay: '0.1s'}}></div>
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-1 h-1'} bg-white rounded-full animate-bounce`} style={{animationDelay: '0.2s'}}></div>
+            <div className="text-white font-medium animate-pulse text-center">
+              <div className="flex items-center gap-1 justify-center mb-1">
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
               </div>
-              <div className="mt-1">Loading</div>
+              <div className="text-xs font-semibold">Loading</div>
             </div>
           ) : (
-            <div className={`text-white ${isExpanded ? 'text-xs' : 'text-[8px]'} leading-tight break-words w-full h-full overflow-hidden text-center flex items-center justify-center`}>
-              {typeof content === 'string' ? (
-                <div className="max-h-full overflow-hidden">
-                  <ReactMarkdown 
-                    className={`prose prose-invert max-w-none prose-p:text-white ${isExpanded ? 'prose-p:text-xs' : 'prose-p:text-[8px]'} prose-p:leading-tight prose-p:my-0.5 ${isExpanded ? 'prose-pre:text-xs' : 'prose-pre:text-[7px]'} prose-pre:bg-black/20 prose-pre:p-1 prose-pre:rounded prose-pre:leading-tight prose-pre:text-white prose-pre:border prose-pre:border-green-400/30`}
-                  >
-                    {content}
-                  </ReactMarkdown>
+            <div className="text-white w-full h-full flex items-center justify-center text-center">
+              {!isExpanded ? (
+                // Collapsed: Show just one key line
+                <div className="text-xs font-bold leading-tight px-2">
+                  {(() => {
+                    if (typeof content === 'string') {
+                      // Extract first meaningful line - remove markdown and get key info
+                      const cleanContent = content.replace(/[#*_`]/g, '').replace(/\n+/g, ' ').trim();
+                      const firstSentence = cleanContent.split('.')[0];
+                      return firstSentence.length > 35 ? firstSentence.substring(0, 32) + '...' : firstSentence;
+                    }
+                    return 'Click to expand';
+                  })()}
                 </div>
               ) : (
-                <div className={`text-white ${isExpanded ? 'text-xs' : 'text-[8px]'} break-words leading-tight font-mono max-h-full overflow-hidden`}>
-                  {JSON.stringify(content, null, 1)}
+                // Expanded: Show all details
+                <div className="text-xs leading-relaxed break-words w-full h-full overflow-hidden px-4 py-3 flex items-center justify-center">
+                  <div className="text-center max-w-full max-h-full overflow-y-auto">
+                    {typeof content === 'string' ? (
+                      <ReactMarkdown 
+                        className="prose prose-invert max-w-none prose-p:text-white prose-p:text-xs prose-p:leading-relaxed prose-p:my-1 prose-pre:text-xs prose-pre:bg-black/20 prose-pre:p-2 prose-pre:rounded prose-pre:text-white prose-pre:border prose-pre:border-green-400/30 prose-p:text-center"
+                      >
+                        {content}
+                      </ReactMarkdown>
+                    ) : (
+                      <div className="font-mono font-medium">
+                        {JSON.stringify(content, null, 2)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -28,7 +28,7 @@ const FloatingHederaBubble = ({ isOpen, onClose, title = 'Hedera', content = '',
         let newX = prev.x;
         
         // Always try to float up (like a balloon)
-        const floatForce = -0.5; // Gentle upward force
+        const floatForce = -1.0; // Faster upward force (2x speed)
         newY += floatForce;
         
         // Stop at top of screen naturally
@@ -175,21 +175,46 @@ const FloatingHederaBubble = ({ isOpen, onClose, title = 'Hedera', content = '',
         </button>
         
         {/* Content area */}
-        <div className="flex-1 p-1 pt-8 overflow-auto flex items-center justify-center relative z-10">
+        <div className="flex-1 pt-6 pb-2 px-1 overflow-hidden flex items-center justify-center relative z-10">
           {loading ? (
-            <div className={`${isExpanded ? 'text-sm' : 'text-[6px]'} text-white font-medium animate-pulse text-center`}>
-              <div className="flex items-center gap-0.5 justify-center">
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`}></div>
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`} style={{animationDelay: '0.1s'}}></div>
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`} style={{animationDelay: '0.2s'}}></div>
+            <div className="text-white font-medium animate-pulse text-center">
+              <div className="flex items-center gap-1 justify-center mb-1">
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
               </div>
-              <div className="mt-0.5">Loading</div>
+              <div className="text-xs font-semibold">Loading</div>
             </div>
           ) : (
-            <div className={`text-white ${isExpanded ? 'text-xs' : 'text-[6px]'} ${isExpanded ? 'leading-tight' : 'leading-[1]'} break-words w-full h-full text-center flex items-start justify-center ${isExpanded ? 'pt-2' : ''}`}>
-              <div className={`${isExpanded ? 'max-h-full overflow-y-auto px-2' : 'max-h-full overflow-hidden'} whitespace-pre-wrap font-mono ${isExpanded ? 'font-medium' : 'font-bold'} ${isExpanded ? 'text-center' : ''}`}>
-                {content}
-              </div>
+            <div className="text-white w-full h-full flex items-center justify-center text-center">
+              {!isExpanded ? (
+                // Collapsed: Show just one key line
+                <div className="text-xs font-bold leading-tight px-2">
+                  {(() => {
+                    if (typeof content === 'string') {
+                      // Extract first meaningful line (price info)
+                      const lines = content.split('\n').filter(line => line.trim());
+                      const priceLine = lines.find(line => 
+                        line.includes('Price:') || 
+                        line.includes('$') ||
+                        line.includes('24h:') ||
+                        line.includes('HBAR')
+                      );
+                      return priceLine || lines[0] || content.substring(0, 30) + '...';
+                    }
+                    return 'Click to expand';
+                  })()}
+                </div>
+              ) : (
+                // Expanded: Show all details
+                <div className="text-xs leading-relaxed break-words w-full h-full overflow-hidden px-4 py-3 flex items-center justify-center">
+                  <div className="text-center max-w-full max-h-full overflow-y-auto">
+                    <div className="whitespace-pre-wrap font-medium">
+                      {content}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

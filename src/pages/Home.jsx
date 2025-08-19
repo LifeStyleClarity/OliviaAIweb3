@@ -397,8 +397,14 @@ export default function Home() {
         'ethena': 'ena',
         'bonk': 'bonk',
         'btc': 'bitcoin',
+        'bitcoin': 'bitcoin',
         'eth': 'ethereum',
-        'sol': 'solana'
+        'ethereum': 'ethereum',
+        'sol': 'solana',
+        'solana': 'solana',
+        'icp': 'internet-computer', // Internet Computer
+        'internet-computer': 'internet-computer',
+        'dfinity': 'internet-computer'
       };
       
       if (coinMappings[coin.toLowerCase()]) {
@@ -422,12 +428,12 @@ export default function Home() {
             const volume = coinData.volume ? `$${(coinData.volume/1e6).toFixed(1)}M` : 'N/A';
             
             let marketText = `${coinData.name} (${coinData.symbol}) - Mentioned by AI\n\n`;
-            marketText += `💰 Price: $${price}\n`;
-            marketText += `📈 24h: ${changeDirection}${change.toFixed(2)}%\n`;
-            marketText += `🏦 Market Cap: ${marketCap}\n`;
-            marketText += `📊 Volume: ${volume}\n`;
-            marketText += `🏆 Rank: #${coinData.rank || 'N/A'}\n\n`;
-            marketText += `✅ Successfully loaded`;
+            marketText += `Price: $${price}\n`;
+            marketText += `24h: ${changeDirection}${change.toFixed(2)}%\n`;
+            marketText += `Market Cap: ${marketCap}\n`;
+            marketText += `Volume: ${volume}\n`;
+            marketText += `Rank: #${coinData.rank || 'N/A'}\n\n`;
+            marketText += `Successfully loaded`;
             
             // Update context awareness with CoinStats data
             updateContextAwareness('market_data', coin.toLowerCase(), {
@@ -537,10 +543,41 @@ export default function Home() {
     }
   }, [showInput])
 
-  // Monitor console for ICP errors
+  // Create ICP Status bubble on startup and monitor ICP connection
   useEffect(() => {
+    // Create initial ICP status bubble showing current state
+    const createICPStatusBubble = () => {
+      setIcpBubbles(prev => {
+        if (prev.length === 0) {
+          const isICPWorking = !!principal || isAuthenticated; // Check if ICP auth is working
+          
+          let content, status;
+          if (isICPWorking) {
+            content = `ICP Network\nConnected\n\nBackend: Active\nAuth: ${isAuthenticated ? 'Authenticated' : 'Available'}\nPrincipal: ${principal ? principal.slice(0, 8) + '...' : 'None'}`;
+            status = 'success';
+          } else {
+            content = `ICP Network\nConnecting...\n\nBackend: Starting\nAuth: Initializing\nStatus: Loading`;
+            status = 'connecting';
+          }
+          
+          const newIcpBubble = {
+            id: Date.now() + Math.random(),
+            title: 'ICP Status',
+            content: content,
+            status: status,
+            loading: false
+          }
+          return [newIcpBubble];
+        }
+        return prev;
+      });
+    };
+
+    // Create bubble after a short delay to let auth initialize
+    const timer = setTimeout(createICPStatusBubble, 1000);
+
+    // Monitor console for ICP errors and update bubble
     const originalConsoleError = console.error;
-    
     console.error = (...args) => {
       const message = args.join(' ');
       
@@ -549,10 +586,17 @@ export default function Home() {
           message.includes('ICP Service:') ||
           message.includes('net::ERR_CONNECTION_REFUSED') && message.includes('4943')) {
         
-        // Only create ICP bubble if none exists
+        // Update existing ICP bubble or create error bubble
         setIcpBubbles(prev => {
-          if (prev.length === 0) {
-            // Create the first and only ICP bubble
+          if (prev.length > 0) {
+            // Update existing bubble with error
+            return prev.map(bubble => ({
+              ...bubble,
+              content: 'ICP Network\nError\n\nDev Mode:\nReplica Offline\nCheck dfx status',
+              status: 'error'
+            }));
+          } else {
+            // Create new error bubble
             const newIcpBubble = {
               id: Date.now() + Math.random(),
               title: 'ICP Status',
@@ -562,11 +606,7 @@ export default function Home() {
             }
             return [newIcpBubble];
           }
-          // If bubble already exists, don't add another one
-          return prev;
         });
-        
-        // Keep bubble visible - no auto-hide for bubble map
       }
       
       // Call original console.error
@@ -574,9 +614,34 @@ export default function Home() {
     };
     
     return () => {
+      clearTimeout(timer);
       console.error = originalConsoleError;
     };
-  }, [])
+  }, [principal, isAuthenticated])
+
+  // Update ICP bubble when authentication status changes
+  useEffect(() => {
+    if (icpBubbles.length > 0) {
+      setIcpBubbles(prev => prev.map(bubble => {
+        const isICPWorking = !!principal || isAuthenticated;
+        
+        let content, status;
+        if (isICPWorking) {
+          content = `ICP Network\nConnected\n\nBackend: Active\nAuth: ${isAuthenticated ? 'Authenticated' : 'Available'}\nPrincipal: ${principal ? principal.slice(0, 8) + '...' : 'None'}`;
+          status = 'success';
+        } else {
+          content = `ICP Network\nConnecting...\n\nBackend: Starting\nAuth: Initializing\nStatus: Loading`;
+          status = 'connecting';
+        }
+        
+        return {
+          ...bubble,
+          content: content,
+          status: status
+        };
+      }));
+    }
+  }, [principal, isAuthenticated, icpBubbles.length])
 
   // Handle sending user message
   const handleSendMessage = async () => {
@@ -1267,6 +1332,13 @@ export default function Home() {
         {import.meta.env.DEV && !isConnected && (
           <div className="text-[10px] mt-1">
             Endpoint: {currentEndpointIndex + 1}/{wsEndpoints?.length || 0}
+            <button 
+              onClick={connect}
+              className="ml-2 px-1 py-0.5 bg-blue-600 hover:bg-blue-700 rounded text-[9px]"
+              disabled={isConnecting}
+            >
+              Retry
+            </button>
           </div>
         )}
       </div>

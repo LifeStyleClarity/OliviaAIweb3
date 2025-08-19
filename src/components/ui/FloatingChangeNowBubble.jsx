@@ -25,7 +25,7 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
         const margin = 20;
         
         // Simple upward floating 
-        let newY = prev.y - 1; // Constant upward movement
+        let newY = prev.y - 2; // Faster upward movement (2x speed)
         let newX = prev.x;
         
         // Get all bubbles for collision detection
@@ -213,50 +213,72 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
         </button>
         
         {/* Content area */}
-        <div className={`flex-1 ${isExpanded ? 'p-1 pt-8' : 'p-0.5 pt-6'} overflow-hidden flex flex-col items-center justify-center relative z-10`}>
+        <div className="flex-1 pt-6 pb-2 px-1 overflow-hidden flex items-center justify-center relative z-10">
           {loading ? (
-            <div className={`${isExpanded ? 'text-sm' : 'text-[8px]'} text-white font-medium animate-pulse text-center`}>
-              <div className="flex items-center gap-0.5 justify-center">
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`}></div>
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`} style={{animationDelay: '0.1s'}}></div>
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`} style={{animationDelay: '0.2s'}}></div>
+            <div className="text-white font-medium animate-pulse text-center">
+              <div className="flex items-center gap-1 justify-center mb-1">
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
               </div>
-              <div className="mt-0.5">Loading</div>
+              <div className="text-xs font-semibold">Loading</div>
             </div>
           ) : (
-            <div className="w-full h-full flex flex-col">
-              <div className={`text-white ${isExpanded ? 'text-xs' : 'text-[8px]'} leading-[1] break-words w-full h-full flex items-center justify-center`}>
-                <div className={`overflow-hidden ${isExpanded ? 'px-2' : ''} whitespace-pre-wrap font-mono font-bold text-center max-h-full w-full`}>
-                  {content}
+            <div className="text-white w-full h-full flex flex-col items-center justify-center text-center">
+              {!isExpanded ? (
+                // Collapsed: Show just one key line
+                <div className="text-xs font-bold leading-tight px-2">
+                  {(() => {
+                    if (typeof content === 'string') {
+                      // Extract first meaningful line (swap info)
+                      const lines = content.split('\n').filter(line => line.trim());
+                      const swapLine = lines.find(line => 
+                        line.includes('Swap:') || 
+                        line.includes('→') ||
+                        line.includes('Exchange')
+                      );
+                      return swapLine || lines[0] || content.substring(0, 30) + '...';
+                    }
+                    return 'Click to expand';
+                  })()}
                 </div>
-              </div>
-              {/* Swap button - only show when expanded */}
-              {isExpanded && content.includes('changenow.io') && (
-                <div className="mt-2 flex justify-center">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Extract the trading pair from content to build direct URL
-                      const swapMatch = content.match(/Swap: (\w+) → (\w+)/);
-                      let url;
-                      if (swapMatch) {
-                        const fromToken = swapMatch[1].toUpperCase();
-                        const toToken = swapMatch[2].toUpperCase();
-                        url = `https://changenow.io/exchange?from=${fromToken}&to=${toToken}&amount=1`;
-                      } else {
-                        url = 'https://changenow.io';
-                      }
-                      // Use in-app browser if available, otherwise fallback to external
-                      if (window.handleUrlClick) {
-                        window.handleUrlClick(url);
-                      } else {
-                        window.open(url, '_blank');
-                      }
-                    }}
-                    className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded-full transition-colors duration-200 shadow-lg"
-                  >
-                    Exchange Now
-                  </button>
+              ) : (
+                // Expanded: Show all details + action button
+                <div className="w-full h-full flex flex-col">
+                  <div className="text-xs leading-relaxed break-words w-full flex-1 overflow-y-auto px-2 py-1">
+                    <div className="whitespace-pre-wrap font-medium">
+                      {content}
+                    </div>
+                  </div>
+                  {/* Swap button - only show when expanded */}
+                  {content.includes('changenow.io') && (
+                    <div className="mt-2 flex justify-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Extract the trading pair from content to build direct URL
+                          const swapMatch = content.match(/Swap: (\w+) → (\w+)/);
+                          let url;
+                          if (swapMatch) {
+                            const fromToken = swapMatch[1].toUpperCase();
+                            const toToken = swapMatch[2].toUpperCase();
+                            url = `https://changenow.io/exchange?from=${fromToken}&to=${toToken}&amount=1`;
+                          } else {
+                            url = 'https://changenow.io';
+                          }
+                          // Use in-app browser if available, otherwise fallback to external
+                          if (window.handleUrlClick) {
+                            window.handleUrlClick(url);
+                          } else {
+                            window.open(url, '_blank');
+                          }
+                        }}
+                        className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded-full transition-colors duration-200 shadow-lg"
+                      >
+                        Exchange Now
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

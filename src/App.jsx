@@ -11,7 +11,9 @@ import { useState, useEffect } from 'react';
 import QrCode from './pages/QrCode';
 
 function App() {
+  console.log('📱 App component rendering...');
   const [showQrCode, setShowQrCode] = useState(false);
+  console.log('📱 App component state initialized');
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;

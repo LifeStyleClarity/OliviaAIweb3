@@ -29,7 +29,7 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
         let newX = prev.x;
         
         // Always try to float up (like a balloon)
-        const floatForce = -0.5; // Gentle upward force
+        const floatForce = -1.0; // Faster upward force (2x speed)
         newY += floatForce;
         
         // Stop at top of screen naturally
@@ -121,7 +121,19 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
   const handleMouseDown = (e) => {
     if (e.target.getAttribute('aria-label') === 'Close') return;
     
-    // Check for double-click
+    setIsDragging(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  const handleClick = (e) => {
+    // Don't toggle if clicking close button
+    if (e.target.getAttribute('aria-label') === 'Close') return;
+    
+    // Check for double-click to pop
     const currentTime = Date.now();
     if (currentTime - lastClickTime < 300) {
       createPopEffect();
@@ -129,15 +141,8 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
     }
     setLastClickTime(currentTime);
     
-    // Expand bubble on mouse down
-    setIsExpanded(true);
-    
-    setIsDragging(true);
-    const rect = e.currentTarget.getBoundingClientRect();
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
+    // Toggle expanded state
+    setIsExpanded(prev => !prev);
   };
 
   const handleMouseMove = (e) => {
@@ -153,9 +158,6 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
   };
 
   const handleMouseUp = () => {
-    // Collapse bubble on mouse up
-    setIsExpanded(false);
-    
     if (isDragging) {
       setIsDragging(false);
       // Bubble will resume upward floating automatically
@@ -175,31 +177,25 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
 
   if (!isOpen) return null;
   
-  // Color scheme based on status - Light Pink Theme
+  // Color scheme based on status
   const colors = {
     error: {
-      bg: 'from-pink-200 via-pink-300 to-rose-300',
-      border: 'border-pink-400/50',
-      shadow: 'shadow-pink-400/30',
-      glow: 'from-pink-300/30 via-rose-300/30 to-pink-400/30',
-      text: 'text-pink-900',
-      icon: '❌'
+      border: 'border-red-400',
+      shadow: '0 0 20px #ef4444, inset 0 0 10px rgba(239, 68, 68, 0.2)',
+      glowBorder: 'border-red-300',
+      glowShadow: '0 0 15px #ef4444'
     },
     success: {
-      bg: 'from-pink-200 via-pink-300 to-rose-300',
-      border: 'border-pink-400/50',
-      shadow: 'shadow-pink-400/30',
-      glow: 'from-pink-300/30 via-rose-300/30 to-pink-400/30',
-      text: 'text-pink-900',
-      icon: '✅'
+      border: 'border-green-400',
+      shadow: '0 0 20px #22c55e, inset 0 0 10px rgba(34, 197, 94, 0.2)',
+      glowBorder: 'border-green-300',
+      glowShadow: '0 0 15px #22c55e'
     },
     connecting: {
-      bg: 'from-pink-200 via-pink-300 to-rose-300',
-      border: 'border-pink-400/50',
-      shadow: 'shadow-pink-400/30',
-      glow: 'from-pink-300/30 via-rose-300/30 to-pink-400/30',
-      text: 'text-pink-900',
-      icon: '🔄'
+      border: 'border-blue-400',
+      shadow: '0 0 20px #3b82f6, inset 0 0 10px rgba(59, 130, 246, 0.2)',
+      glowBorder: 'border-blue-300',
+      glowShadow: '0 0 15px #3b82f6'
     }
   };
 
@@ -221,16 +217,17 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
         willChange: isDragging ? 'transform' : 'auto'
       }}
       onMouseDown={handleMouseDown}
+      onClick={handleClick}
       data-bubble="icp"
       data-bubble-id={bubbleId}
     >
-      <div className="w-full h-full bg-transparent border border-green-400 rounded-full shadow-2xl flex flex-col overflow-hidden relative" style={{boxShadow: '0 0 20px #4ade80, inset 0 0 10px rgba(74, 222, 128, 0.2)'}}>
-        {/* Neon green glowing border effect */}
-        <div className="absolute inset-0 rounded-full border border-green-300 animate-pulse" style={{boxShadow: '0 0 15px #4ade80'}}></div>
+      <div className={`w-full h-full bg-transparent border ${theme.border} rounded-full shadow-2xl flex flex-col overflow-hidden relative`} style={{boxShadow: theme.shadow}}>
+        {/* Neon glowing border effect */}
+        <div className={`absolute inset-0 rounded-full border ${theme.glowBorder} animate-pulse`} style={{boxShadow: theme.glowShadow}}></div>
         
         {/* ICP Logo at top */}
         <div className="absolute top-1 left-1/2 transform -translate-x-1/2 z-10">
-          <div className="w-6 h-6 rounded-full overflow-hidden border border-green-500/70 shadow-lg shadow-green-500/40">
+          <div className={`w-6 h-6 rounded-full overflow-hidden border ${theme.border} shadow-lg`}>
             <img src={icpLogo} alt="ICP Logo" className="w-full h-full object-cover" />
           </div>
         </div>
@@ -238,28 +235,53 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-0.5 right-0.5 text-white hover:text-red-600 w-4 h-4 rounded-full bg-white/20 hover:bg-white/30 transition-all text-xs font-bold flex items-center justify-center border border-white/20 z-10"
+          className={`absolute top-0.5 right-0.5 text-white hover:text-red-400 w-4 h-4 rounded-full bg-black/30 hover:bg-black/50 transition-all text-xs font-bold flex items-center justify-center border ${theme.border}/50 z-10`}
           aria-label="Close"
         >
           ×
         </button>
         
         {/* Content area */}
-        <div className="flex-1 p-0.5 pt-6 overflow-hidden flex items-center justify-center relative z-10">
+        <div className="flex-1 pt-6 pb-2 px-1 overflow-hidden flex items-center justify-center relative z-10">
           {loading ? (
-            <div className={`${isExpanded ? 'text-sm' : 'text-[8px]'} text-white font-medium animate-pulse text-center`}>
-              <div className="flex items-center gap-0.5 justify-center">
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`}></div>
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`} style={{animationDelay: '0.1s'}}></div>
-                <div className={`${isExpanded ? 'w-3 h-3' : 'w-0.5 h-0.5'} bg-white rounded-full animate-bounce`} style={{animationDelay: '0.2s'}}></div>
+            <div className="text-white font-medium animate-pulse text-center">
+              <div className="flex items-center gap-1 justify-center mb-1">
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
               </div>
-              <div className="mt-0.5">Loading</div>
+              <div className="text-xs font-semibold">Loading</div>
             </div>
           ) : (
-            <div className={`text-white ${isExpanded ? 'text-sm' : 'text-[8px]'} leading-[1] break-words w-full h-full overflow-hidden text-center flex items-center justify-center`}>
-              <div className="max-h-full overflow-hidden whitespace-pre-wrap font-mono font-bold">
-                {content}
-              </div>
+            <div className="text-white w-full h-full flex items-center justify-center text-center">
+              {!isExpanded ? (
+                // Collapsed: Show just one key line
+                <div className="text-xs font-bold leading-tight px-2">
+                  {(() => {
+                    if (typeof content === 'string') {
+                      // Extract first meaningful line (status info)
+                      const lines = content.split('\n').filter(line => line.trim());
+                      const statusLine = lines.find(line => 
+                        line.includes('Status:') || 
+                        line.includes('Connected') ||
+                        line.includes('Error') ||
+                        line.includes('ICP')
+                      );
+                      return statusLine || lines[0] || content.substring(0, 30) + '...';
+                    }
+                    return 'Click to expand';
+                  })()}
+                </div>
+              ) : (
+                // Expanded: Show all details
+                <div className="text-xs leading-relaxed break-words w-full h-full overflow-hidden px-4 py-3 flex items-center justify-center">
+                  <div className="text-center max-w-full max-h-full overflow-y-auto">
+                    <div className="whitespace-pre-wrap font-medium">
+                      {content}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
