@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext';
 import icpService from '../api/services/icp.service';
 import { privacyService } from '../api/services/privacy.service.js';
 import { aiService } from '../api/services/ai.service.js';
+import { ENDPOINTS, OPENAI_MICROSERVICE_CONFIG } from '../api/config/endpoints.js';
 
 const WebSocketContext = createContext();
 
@@ -47,13 +48,54 @@ export const WebSocketProvider = ({ children }) => {
   const [icpInitialized, setIcpInitialized] = useState(true); // START AS TRUE
   const [icpUser, setIcpUser] = useState({ id: 'guest_user', isGuest: true }); // SET IMMEDIATELY
   
-  // Use the EXISTING conversation ID from the canister - this is the key fix!
+  // Generate or load conversation ID with 90-day expiration
   const [conversationId, setConversationId] = useState(() => {
-    // Force use the existing conversation ID from your canister
-    const existingConversationId = "conv_1754571813996_wga2cvd7j";
-    console.log('🟦 FORCING existing conversation ID from canister:', existingConversationId);
-    localStorage.setItem('olivia_conversation_id', existingConversationId);
-    return existingConversationId;
+    const STORAGE_KEY = 'olivia_conversation_id';
+    const EXPIRATION_KEY = 'olivia_conversation_id_expires';
+    const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+    
+    try {
+      const storedId = localStorage.getItem(STORAGE_KEY);
+      const storedExpiration = localStorage.getItem(EXPIRATION_KEY);
+      
+      // Check if we have a stored ID and it hasn't expired
+      if (storedId && storedExpiration) {
+        const expirationTime = parseInt(storedExpiration, 10);
+        const now = Date.now();
+        
+        if (now < expirationTime) {
+          console.log('🟦 Loading existing conversation ID from localStorage:', storedId);
+          return storedId;
+        } else {
+          console.log('🟦 Stored conversation ID expired, generating new one');
+          // Clear expired data
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(EXPIRATION_KEY);
+        }
+      }
+      
+      // Generate truly random conversation ID every time
+      const timestamp = Date.now();
+      const randomPart1 = Math.random().toString(36).substr(2, 9);
+      const randomPart2 = Math.random().toString(36).substr(2, 6);
+      const newConversationId = `conv_${timestamp}_${randomPart1}_${randomPart2}`;
+      const expirationTime = Date.now() + NINETY_DAYS_MS;
+      
+      // Store with expiration
+      localStorage.setItem(STORAGE_KEY, newConversationId);
+      localStorage.setItem(EXPIRATION_KEY, expirationTime.toString());
+      
+      console.log('🟦 Generated new conversation ID:', newConversationId);
+      console.log('🟦 Conversation ID expires on:', new Date(expirationTime).toLocaleDateString());
+      
+      return newConversationId;
+    } catch (error) {
+      console.error('🟦 Error managing conversation ID localStorage:', error);
+      // Fallback: generate temporary random ID without storage
+      const fallbackId = generateConversationId();
+      console.log('🟦 Using fallback conversation ID:', fallbackId);
+      return fallbackId;
+    }
   });
   
   // Debug ICP state changes
@@ -67,13 +109,17 @@ export const WebSocketProvider = ({ children }) => {
   const AGENT_ID = 'e66ea468-98a4-40a9-a9fd-803a39574e0e';
   const MODEL_NAME = 'gpt-4.1';
   
-  // WebSocket endpoints to try (in order of preference)
-  const wsBase = import.meta.env.VITE_WEBSOCKET_URL || 'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app';
+  // WebSocket endpoints - Secure-only mode using microservice proxy
   const WS_ENDPOINTS = [
-    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app/ws/agent/stream', // Primary endpoint
-    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app/ws', // Fallback 1
-    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app', // Fallback 2
-    'ws://localhost:8080/ws/agent/stream' // Local development fallback
+    ENDPOINTS.WEBSOCKET.SECURE_PROXY, // Secure proxy endpoint (only option)
+  ];
+  
+  // Fallback endpoints for development/emergency use (commented out for production security)
+  const FALLBACK_ENDPOINTS = [
+    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app/ws/agent/stream',
+    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app/ws',
+    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app',
+    'ws://localhost:8080/ws/agent/stream'
   ];
   
   const [currentEndpointIndex, setCurrentEndpointIndex] = useState(0);
@@ -138,10 +184,42 @@ export const WebSocketProvider = ({ children }) => {
     return `req_${++requestIdRef.current}_${Date.now()}`;
   };
 
-  // Generate conversation ID
+  // Generate truly random conversation ID every time
   const generateConversationId = () => {
-    return `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const timestamp = Date.now();
+    const randomPart1 = Math.random().toString(36).substr(2, 9);
+    const randomPart2 = Math.random().toString(36).substr(2, 6);
+    return `conv_${timestamp}_${randomPart1}_${randomPart2}`;
   };
+
+  // Clear conversation ID and start fresh (useful for testing or user logout)
+  const clearConversationId = useCallback(() => {
+    const STORAGE_KEY = 'olivia_conversation_id';
+    const EXPIRATION_KEY = 'olivia_conversation_id_expires';
+    
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(EXPIRATION_KEY);
+      
+      // Generate new conversation ID
+      const newConversationId = generateConversationId();
+      const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+      const expirationTime = Date.now() + NINETY_DAYS_MS;
+      
+      localStorage.setItem(STORAGE_KEY, newConversationId);
+      localStorage.setItem(EXPIRATION_KEY, expirationTime.toString());
+      
+      setConversationId(newConversationId);
+      
+      console.log('🟦 Cleared old conversation ID and generated new one:', newConversationId);
+      console.log('🟦 New conversation ID expires on:', new Date(expirationTime).toLocaleDateString());
+      
+      return newConversationId;
+    } catch (error) {
+      console.error('🟦 Error clearing conversation ID:', error);
+      return null;
+    }
+  }, []);
 
   // Initialize ICP and create/get user
   const initializeICP = useCallback(async () => {
@@ -495,7 +573,25 @@ export const WebSocketProvider = ({ children }) => {
       }
     }, CONNECTION_TIMEOUT);
     
-    wsRef.current = new WebSocket(wsUrl);
+    // Create WebSocket connection - Secure proxy only
+    if (wsUrl === ENDPOINTS.WEBSOCKET.SECURE_PROXY) {
+      if (OPENAI_MICROSERVICE_CONFIG.TOKEN) {
+        // Add token as query parameter for secure proxy authentication
+        const authenticatedUrl = `${wsUrl}?token=${encodeURIComponent(OPENAI_MICROSERVICE_CONFIG.TOKEN)}`;
+        console.log('🔐 Using secure proxy with authentication');
+        wsRef.current = new WebSocket(authenticatedUrl);
+      } else {
+        // No token available for secure proxy
+        console.error('🚨 No authentication token available for secure proxy');
+        setWsError(new Error('Authentication token required for secure proxy'));
+        setIsConnecting(false);
+        return;
+      }
+    } else {
+      // This should not happen in secure-only mode, but handle gracefully
+      console.warn('⚠️ Attempting to connect to non-secure endpoint in secure-only mode');
+      wsRef.current = new WebSocket(wsUrl);
+    }
 
     wsRef.current.onopen = () => {
       // Clear connection timeout
@@ -558,40 +654,52 @@ export const WebSocketProvider = ({ children }) => {
     };
 
     wsRef.current.onerror = (error) => {
-      console.error('🚨 Olivia AI WebSocket Error:', {
+      console.error('🚨 Secure WebSocket Proxy Error:', {
         url: wsUrl,
         error: error,
         readyState: wsRef.current?.readyState,
         attempt: connectionAttempts + 1,
-        endpointIndex: currentEndpointIndex,
-        totalEndpoints: WS_ENDPOINTS.length,
-        message: 'Failed to connect to Olivia AI service'
+        isSecureProxy: wsUrl === ENDPOINTS.WEBSOCKET.SECURE_PROXY,
+        message: 'Failed to connect to secure microservice proxy'
       });
       setWsError(error);
       setIsConnected(false);
       setIsConnecting(false);
       
-      // Try next endpoint if available
-      if (currentEndpointIndex < WS_ENDPOINTS.length - 1 && isMounted) {
-        console.log(`🔌 Trying next WebSocket endpoint... (${currentEndpointIndex + 1}/${WS_ENDPOINTS.length - 1})`);
-        setCurrentEndpointIndex(prev => prev + 1);
+      // In secure-only mode, we only have one endpoint
+      if (wsUrl === ENDPOINTS.WEBSOCKET.SECURE_PROXY) {
+        console.error('🚨 Secure proxy connection failed. Please check:');
+        console.error('   - Microservice is running on port 3001');
+        console.error('   - Authentication token is configured');
+        console.error('   - CORS settings allow your origin');
         
-        // Retry with next endpoint after short delay
-        setTimeout(() => {
-          if (isMounted && shouldReconnect) {
-            connectWebSocket();
-          }
-        }, 1000);
-      } else {
-        // All endpoints failed, clear timeout and reset
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = null;
+        // Retry the same endpoint after delay if should reconnect
+        if (isMounted && shouldReconnect) {
+          const retryDelay = Math.min(Math.pow(2, connectionAttempts) * 1000, 30000);
+          console.log(`🔄 Retrying secure proxy connection in ${retryDelay/1000}s...`);
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (isMounted && shouldReconnect) {
+              setConnectionAttempts(prev => prev + 1);
+              connectWebSocket();
+            }
+          }, retryDelay);
         }
-        
-        // Reset to first endpoint for future attempts
-        setCurrentEndpointIndex(0);
-        console.error('🚨 All WebSocket endpoints failed. Service may be down.');
+      } else {
+        // Fallback endpoints handling (for development mode)
+        if (currentEndpointIndex < WS_ENDPOINTS.length - 1 && isMounted) {
+          console.log(`🔌 Trying next WebSocket endpoint... (${currentEndpointIndex + 1}/${WS_ENDPOINTS.length - 1})`);
+          setCurrentEndpointIndex(prev => prev + 1);
+          
+          setTimeout(() => {
+            if (isMounted && shouldReconnect) {
+              connectWebSocket();
+            }
+          }, 1000);
+        } else {
+          setCurrentEndpointIndex(0);
+          console.error('🚨 All WebSocket endpoints failed. Service may be down.');
+        }
       }
     };
   }, [isConnecting, connectionAttempts, shouldReconnect, isServerUnavailable, currentEndpointIndex, handleWebSocketMessage]);
@@ -647,59 +755,25 @@ export const WebSocketProvider = ({ children }) => {
     }
   }, []);
 
+
+
   const sendMessage = useCallback(async (message, conversationHistory = [], searchEnabled = false, imageEnabled = false) => {
-    if (!wsRef.current) {
-      console.log('❌ WebSocket reference is null');
-      return false;
-    }
-    
-    if (wsRef.current.readyState !== WebSocket.OPEN) {
-      console.log('❌ WebSocket is not connected. State:', wsRef.current.readyState, 'Expected:', WebSocket.OPEN);
-      return false;
-    }
-
-    // 🔍 Check if message is a trading request BEFORE sending to WebSocket
     try {
-      const tradingResult = await aiService.handleTradingRequest(message);
-      if (tradingResult) {
-        console.log('💱 Trading request detected:', tradingResult);
-        
-        const requestId = generateRequestId();
-        
-        // Add to pending messages first
-        pendingMessagesRef.current.set(requestId, {
-          requestId,
-          message,
-          timestamp: Date.now()
-        });
-        
-        console.log('🟦 Added trading message to pending:', {
-          requestId,
-          message,
-          pendingCount: pendingMessagesRef.current.size
-        });
-
-        // Generate a mock response for trading
-        const tradingResponse = {
-          type: 'stream_complete',
-          requestId: requestId,
-          data: {
-            fullResponse: tradingResult.oliviaMessage,
-            urlSources: { annotations: [] }
-          }
-        };
-
-        // Trigger the response handlers by directly calling the message handler
-        setTimeout(() => {
-          // Directly call the WebSocket message handler with the parsed data
-          handleWebSocketMessage(tradingResponse);
-        }, 500); // Small delay to simulate processing
-
-        return true;
-      }
+      // Wait for WebSocket to be connected
+      await waitForConnection();
     } catch (error) {
-      console.error('🔍 Trading detection error:', error);
+      console.error('❌ Failed to establish WebSocket connection:', error);
+      return false;
     }
+
+    // Double-check connection after waiting
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.log('❌ WebSocket still not connected after waiting');
+      return false;
+    }
+
+    // 🔍 Trading request handling removed - all messages now go to AI
+    // This allows the AI to handle trading requests with full context and capability
 
     const requestId = generateRequestId();
     const userOptions = extractUserOptions();
@@ -804,6 +878,49 @@ export const WebSocketProvider = ({ children }) => {
     }, 50);
   }, []); // No dependencies to avoid circular refs
 
+  // Wait for WebSocket connection to be ready
+  const waitForConnection = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      // If already connected, resolve immediately
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        console.log('✅ WebSocket already connected');
+        resolve(true);
+        return;
+      }
+
+      console.log('🔄 WebSocket not connected, attempting to connect...');
+      
+      // Set up timeout for connection attempt
+      const connectionTimeout = setTimeout(() => {
+        console.log('⏱️ WebSocket connection timeout (30s)');
+        reject(new Error('Connection timeout - unable to connect to AI service'));
+      }, 30000); // 30 second timeout
+
+      // Set up connection listener
+      const checkConnection = () => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          clearTimeout(connectionTimeout);
+          console.log('✅ WebSocket connection established');
+          resolve(true);
+        } else if (wsRef.current?.readyState === WebSocket.CLOSED || wsRef.current?.readyState === WebSocket.CLOSING) {
+          // Connection failed, wait a bit and check again
+          setTimeout(checkConnection, 500);
+        } else {
+          // Still connecting, keep checking
+          setTimeout(checkConnection, 100);
+        }
+      };
+
+      // Trigger connection if not already connecting
+      if (!isConnecting && (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED)) {
+        connect();
+      }
+
+      // Start checking for connection
+      setTimeout(checkConnection, 100);
+    });
+  }, [isConnecting, connect]);
+
   // Auto-initialize ICP when context is ready
   useEffect(() => {
     console.log('🟦 ICP Auto-init useEffect running:', { 
@@ -882,6 +999,24 @@ export const WebSocketProvider = ({ children }) => {
     };
   }, [initializeICP]);
 
+  // Debug function to show current configuration
+  const getConnectionInfo = useCallback(() => {
+    return {
+      mode: 'secure-only',
+      primaryEndpoint: ENDPOINTS.WEBSOCKET.SECURE_PROXY,
+      hasAuthToken: !!OPENAI_MICROSERVICE_CONFIG.TOKEN,
+      microserviceUrl: OPENAI_MICROSERVICE_CONFIG.URL,
+      currentStatus: {
+        isConnected,
+        isConnecting,
+        connectionAttempts,
+        currentEndpointIndex,
+        wsError: wsError?.message || null
+      },
+      fallbackEndpoints: FALLBACK_ENDPOINTS
+    };
+  }, [isConnected, isConnecting, connectionAttempts, currentEndpointIndex, wsError]);
+
   const value = {
     isConnected,
     isConnecting,
@@ -902,13 +1037,15 @@ export const WebSocketProvider = ({ children }) => {
     cancelStreamingResponse,
     generateRequestId,
     pendingRequests: pendingRequestsRef.current,
+    getConnectionInfo, // Debug function
     // ICP Storage
     icpInitialized,
     icpUser,
     conversationId,
     initializeICP,
     saveToICP,
-    getConversationHistory
+    getConversationHistory,
+    clearConversationId
   };
 
   return (

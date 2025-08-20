@@ -9,6 +9,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test:integration": "node test-frontend-integration.js",
     "icp:start": "cd icp_backend && dfx start --background",
     "icp:stop": "cd icp_backend && dfx stop",
     "icp:deploy": "cd icp_backend && dfx deploy",

@@ -187,16 +187,16 @@ const FloatingCoinGeckoBubble = ({ isOpen, onClose, title = 'CoinGecko', content
   if (!isOpen) return null;
   
   // Dynamic bubble size based on content length and expanded state
-  let bubbleSize = 128; // Base collapsed size
+  let bubbleSize = 140; // Base collapsed size - slightly bigger for the new design
   if (isExpanded && typeof content === 'string') {
     // Calculate size based on content length
     const lines = content.split('\n').length;
     const avgLineLength = content.length / lines;
-    const estimatedWidth = Math.max(250, Math.min(450, avgLineLength * 8 + 100));
-    const estimatedHeight = Math.max(200, lines * 20 + 80);
+    const estimatedWidth = Math.max(320, Math.min(480, avgLineLength * 8 + 140));
+    const estimatedHeight = Math.max(280, lines * 22 + 120);
     bubbleSize = Math.max(estimatedWidth, estimatedHeight);
   } else if (isExpanded) {
-    bubbleSize = 300; // Default expanded size
+    bubbleSize = 380; // Default expanded size - slightly bigger
   }
   const bubbleWidth = bubbleSize;
   const bubbleHeight = bubbleSize;
@@ -217,92 +217,97 @@ const FloatingCoinGeckoBubble = ({ isOpen, onClose, title = 'CoinGecko', content
       data-bubble="coingecko"
       data-bubble-id={bubbleId}
     >
-                   <div className="w-full h-full bg-transparent border border-green-400 rounded-full shadow-2xl flex flex-col overflow-hidden relative" style={{boxShadow: '0 0 20px #4ade80, inset 0 0 10px rgba(74, 222, 128, 0.2)'}}>
-        {/* Neon green glowing border effect */}
-        <div className="absolute inset-0 rounded-full border border-green-300 animate-pulse" style={{boxShadow: '0 0 15px #4ade80'}}></div>
+      <div className="w-full h-full bg-gradient-to-br from-black/80 via-black/90 to-black/95 border-2 border-green-400 rounded-full shadow-2xl flex flex-col overflow-hidden relative backdrop-blur-sm" style={{boxShadow: '0 0 30px #4ade80, inset 0 0 20px rgba(74, 222, 128, 0.15)'}}>
+        {/* Enhanced neon green glowing border effect */}
+        <div className="absolute inset-0 rounded-full border border-green-300/60 animate-pulse" style={{boxShadow: '0 0 25px #4ade80, 0 0 50px rgba(74, 222, 128, 0.3)'}}></div>
         
-        {/* Profile picture at top */}
-        <div className="absolute top-1 left-1/2 transform -translate-x-1/2 z-10">
-          <div className="w-6 h-6 rounded-full overflow-hidden border border-green-600/70 shadow-lg shadow-green-500/40">
-            <img 
-              src={coingeckoIcon} 
-              alt="CoinGecko" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
+        {/* Ambient glow overlay */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-t from-green-500/5 via-transparent to-green-400/10 animate-pulse" style={{animationDuration: '3s'}}></div>
 
-        {/* Close button */}
+        {/* Enhanced close button */}
         <button
           onClick={onClose}
-          className="absolute top-0.5 right-0.5 text-white hover:text-red-400 w-4 h-4 rounded-full bg-black/30 hover:bg-black/50 transition-all text-xs font-bold flex items-center justify-center border border-green-400/50 z-10"
+          className="absolute top-1 right-1 text-white hover:text-red-400 w-5 h-5 rounded-full bg-black/50 hover:bg-red-500/20 transition-all duration-300 text-xs font-bold flex items-center justify-center border border-green-400/50 hover:border-red-400/70 z-20 hover:shadow-lg hover:shadow-red-400/30"
           aria-label="Close"
         >
           ×
         </button>
         
-        {/* Content area */}
-        <div className="flex-1 pt-6 pb-2 px-1 overflow-hidden flex items-center justify-center relative z-10">
+        {/* Spherical Content Area */}
+        <div className="absolute inset-4 flex items-center justify-center">
           {loading ? (
-            <div className="text-white font-medium animate-pulse text-center">
-              <div className="flex items-center gap-1 justify-center mb-1">
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+            <div className="text-white font-medium animate-pulse text-center flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-green-400 shadow-lg shadow-green-500/40 mb-2 bg-black/20">
+                <img 
+                  src={coingeckoIcon} 
+                  alt="CoinGecko" 
+                  className="w-full h-full object-cover opacity-50"
+                />
               </div>
-              <div className="text-xs font-semibold">Loading</div>
+              <div className="flex items-center gap-1 justify-center mb-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+              </div>
+              <div className="text-xs font-semibold text-green-400">Loading...</div>
             </div>
           ) : (
-            <div className="text-white w-full h-full flex items-center justify-center text-center">
-                            {!isExpanded ? (
-                // Collapsed: Show coin name + price
-                <div className="text-xs font-bold leading-tight px-2">
-                  {(() => {
-                    if (typeof content === 'string') {
-                      const lines = content.split('\n').filter(line => line.trim());
-                      
-                      // Try to extract coin name from first line
-                      const firstLine = lines[0] || '';
-                      let coinName = '';
-                      
-                      // Extract coin name from patterns like "Bitcoin (BTC) Market Stats" or "Bitcoin (BTC) - Olivia thought"
-                      const nameMatch = firstLine.match(/^([^(]+)\s*\([^)]+\)/);
-                      if (nameMatch) {
-                        coinName = nameMatch[1].trim();
-                      }
-                      
-                      // Find price line
-                      const priceLine = lines.find(line => 
-                        line.includes('Price:') && line.includes('$')
-                      );
-                      
-                      if (coinName && priceLine) {
-                        // Extract price from "Price: $X.XX" format
-                        const priceMatch = priceLine.match(/Price:\s*\$([\d,\.]+[kK]?)/i);
-                        const price = priceMatch ? `$${priceMatch[1]}` : priceLine.replace('Price:', '').trim();
-                        return `${coinName} - ${price}`;
-                      }
-                      
-                      // Fallback to price line or first line
-                      return priceLine || firstLine || content.substring(0, 30) + '...';
-                    }
-                    return 'Click to expand';
-                  })()} 
+            <div className="w-full h-full flex items-center justify-center text-center relative">
+              {!isExpanded ? (
+                // Collapsed: Central icon with title below in spherical layout
+                <div className="flex flex-col items-center justify-center">
+                  {/* Central CoinGecko Icon */}
+                  <div className="relative mb-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-4 border-green-400 shadow-2xl shadow-green-500/60 bg-gradient-to-br from-green-400/30 to-green-600/40 hover:border-green-300 transition-all duration-300 hover:shadow-green-400/80 hover:scale-105 group">
+                      <img 
+                        src={coingeckoIcon} 
+                        alt="CoinGecko" 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                      {/* Inner circular glow */}
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-t from-transparent via-green-400/10 to-green-300/20"></div>
+                    </div>
+                    {/* Pulsing outer ring */}
+                    <div className="absolute inset-0 rounded-full border-2 border-green-300/40 animate-ping" style={{animationDuration: '3s'}}></div>
+                  </div>
+                  
+                  {/* Circular text layout */}
+                  <div className="text-center">
+                    <div className="text-xs font-bold text-green-300 drop-shadow-xl">{title}</div>
+                  </div>
                 </div>
               ) : (
-                // Expanded: Show all details
-                <div className="text-xs leading-relaxed break-words w-full h-full px-4 py-3 flex items-center justify-center">
-                  <div className="text-center">
-                    {typeof content === 'string' ? (
-                      <div className="whitespace-pre-wrap font-medium">
-                        {content}
-                      </div>
-                    ) : (
-                      <div className="font-mono font-medium">
-                        {JSON.stringify(content, null, 2)}
-                      </div>
-                    )}
+                // Expanded: Spherical content organization
+                <div className="w-full h-full relative flex flex-col items-center justify-center p-6">
+                  {/* Top section - Icon and title in circular arc */}
+                  <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-green-400 shadow-lg shadow-green-500/40 bg-gradient-to-br from-green-400/20 to-green-600/30 mb-2">
+                      <img 
+                        src={coingeckoIcon} 
+                        alt="CoinGecko" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="text-sm font-bold text-green-300 drop-shadow-lg">{title}</div>
+                    <div className="text-xs text-white/70 font-medium">Market Data</div>
                   </div>
+                  
+                  {/* Central content area - spherical text flow */}
+                  <div className="flex-1 flex items-center justify-center mt-24 mb-4 max-w-full overflow-hidden">
+                    <div className="text-center max-h-full overflow-auto px-4">
+                      {typeof content === 'string' ? (
+                        <div className="whitespace-pre-wrap font-medium text-sm text-white/90 leading-relaxed">
+                          {content}
+                        </div>
+                      ) : (
+                        <div className="font-mono text-xs text-green-300 bg-black/30 p-3 rounded-full border border-green-400/30 max-w-full">
+                          {JSON.stringify(content, null, 2)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+
                 </div>
               )}
             </div>

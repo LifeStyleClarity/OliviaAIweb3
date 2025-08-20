@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useWebSocket } from '../contexts/WebSocketContext'
 import { useInternetIdentity } from '../contexts/InternetIdentityContext'
 import { useAccountUpgrade } from '../hooks/useAccountUpgrade';
+import { icpService } from '../api/services/icp.service.js';
 import { lurkyService, coingeckoService, coinstatsService, hgraphService, changeNowService } from '../api';
 import FloatingLurkyBubble from '../components/ui/FloatingLurkyBubble.jsx';
 import FloatingCoinGeckoBubble from '../components/ui/FloatingCoinGeckoBubble.jsx';
@@ -497,14 +498,26 @@ export default function Home() {
   // Create ICP Status bubble on startup and monitor ICP connection
   useEffect(() => {
     // Create initial ICP status bubble showing current state
-    const createICPStatusBubble = () => {
+    const createICPStatusBubble = async () => {
+      // Test backend connectivity using the existing ICP service method
+      let isBackendReachable = false;
+      try {
+        const connectionTest = await icpService.testConnection();
+        isBackendReachable = connectionTest.success;
+        console.log('🟦 ICP Backend connectivity test:', connectionTest);
+      } catch (error) {
+        console.log('🟦 ICP Backend connectivity test failed:', error);
+        isBackendReachable = false;
+      }
+      
       setIcpBubbles(prev => {
         if (prev.length === 0) {
-          const isICPWorking = !!principal || isAuthenticated; // Check if ICP auth is working
+          // Show connected if backend is reachable OR user is authenticated
+          const isICPWorking = isBackendReachable || !!principal || isAuthenticated;
           
           let content, status;
           if (isICPWorking) {
-            content = `ICP Network\nConnected\n\nBackend: Active\nAuth: ${isAuthenticated ? 'Authenticated' : 'Available'}\nPrincipal: ${principal ? principal.slice(0, 8) + '...' : 'None'}`;
+            content = `ICP Network\nConnected\n\nBackend: ${isBackendReachable ? 'Active' : 'Offline'}\nAuth: ${isAuthenticated ? 'Authenticated' : 'Available'}\nPrincipal: ${principal ? principal.slice(0, 8) + '...' : 'None'}`;
             status = 'success';
           } else {
             content = `ICP Network\nConnecting...\n\nBackend: Starting\nAuth: Initializing\nStatus: Loading`;
@@ -573,24 +586,38 @@ export default function Home() {
   // Update ICP bubble when authentication status changes
   useEffect(() => {
     if (icpBubbles.length > 0) {
-      setIcpBubbles(prev => prev.map(bubble => {
-        const isICPWorking = !!principal || isAuthenticated;
-        
-        let content, status;
-        if (isICPWorking) {
-          content = `ICP Network\nConnected\n\nBackend: Active\nAuth: ${isAuthenticated ? 'Authenticated' : 'Available'}\nPrincipal: ${principal ? principal.slice(0, 8) + '...' : 'None'}`;
-          status = 'success';
-        } else {
-          content = `ICP Network\nConnecting...\n\nBackend: Starting\nAuth: Initializing\nStatus: Loading`;
-          status = 'connecting';
+      // Test backend connectivity on auth changes
+      const updateBubbleStatus = async () => {
+        let isBackendReachable = false;
+        try {
+          const connectionTest = await icpService.testConnection();
+          isBackendReachable = connectionTest.success;
+        } catch (error) {
+          console.log('🟦 ICP Backend connectivity update test failed:', error);
+          isBackendReachable = false;
         }
         
-        return {
-          ...bubble,
-          content: content,
-          status: status
-        };
-      }));
+        setIcpBubbles(prev => prev.map(bubble => {
+          const isICPWorking = isBackendReachable || !!principal || isAuthenticated;
+          
+          let content, status;
+          if (isICPWorking) {
+            content = `ICP Network\nConnected\n\nBackend: ${isBackendReachable ? 'Active' : 'Offline'}\nAuth: ${isAuthenticated ? 'Authenticated' : 'Available'}\nPrincipal: ${principal ? principal.slice(0, 8) + '...' : 'None'}`;
+            status = 'success';
+          } else {
+            content = `ICP Network\nConnecting...\n\nBackend: Starting\nAuth: Initializing\nStatus: Loading`;
+            status = 'connecting';
+          }
+          
+          return {
+            ...bubble,
+            content: content,
+            status: status
+          };
+        }));
+      };
+      
+      updateBubbleStatus();
     }
   }, [principal, isAuthenticated, icpBubbles.length])
 
@@ -1119,14 +1146,17 @@ export default function Home() {
         id: Date.now() + Math.random(), // Unique ID
         title: `${mentionedCoin.toUpperCase()} Exchange - ChangeNOW`,
         content: `Getting exchange data for ${mentionedCoin.toUpperCase()}...`,
-        loading: true
+        loading: true,
+        originalQuery: message // Store the original user message for OpenAI extraction
       }
       
       setChangeNowBubbles(prev => [...prev, newBubble])
       ;(async () => {
         try {
-          // For "buy [token]" - user wants to buy the token with USDT (USDT -> Token)
-          const exchangeInfo = await changeNowService.getExchangeInfo('usdt', mentionedCoin, 1);
+          // For "buy [token]" - user wants to buy the token with USD (USD -> Token)
+          // Use 'usd' for fiat purchases instead of 'usdt' for crypto-to-crypto
+          const sourceToken = message.toLowerCase().includes('buy') ? 'usd' : 'usdt';
+          const exchangeInfo = await changeNowService.getExchangeInfo(sourceToken, mentionedCoin, 1);
           
           let exchangeText = '';
           
@@ -1134,7 +1164,8 @@ export default function Home() {
             const fromToken = exchangeInfo.fromCurrency;
             const toToken = exchangeInfo.toCurrency;
             
-            exchangeText = `Buy ${toToken.name} (${toToken.ticker.toUpperCase()}) with USDT\n\n`;
+            const sourceDisplayName = sourceToken.toUpperCase() === 'USD' ? 'USD' : 'USDT';
+            exchangeText = `Buy ${toToken.name} (${toToken.ticker.toUpperCase()}) with ${sourceDisplayName}\n\n`;
             
             // Minimum exchange amount
             if (exchangeInfo.minAmount) {
@@ -1166,8 +1197,26 @@ export default function Home() {
             
             exchangeText += `\nProcessing: ~5-30 minutes\n`;
             exchangeText += `Cross-chain swaps available\n\n`;
-            // For "buy [token]" - user wants to buy the token with USDT (USDT -> Token)
-            exchangeText += `Ready to swap?\nVisit: https://changenow.io\nSwap: ${fromToken.ticker.toUpperCase()} → ${toToken.ticker.toUpperCase()}`;
+            // Normalize token symbols for URL generation
+            const normalizeTokenSymbol = (symbol) => {
+              const normalized = symbol.toLowerCase();
+              // Handle common ChangeNOW API symbol variations
+              if (normalized.includes('usd') && !normalized.includes('usdt')) return 'USD';
+              if (normalized === 'usdt' || normalized.includes('usdt')) return 'USDT';
+              if (normalized === 'ton' || normalized.includes('ton')) return 'TON';
+              return symbol.toUpperCase();
+            };
+            
+            const fromSymbol = normalizeTokenSymbol(fromToken.ticker);
+            const toSymbol = normalizeTokenSymbol(toToken.ticker);
+            
+            // For "buy [token]" operations, show the appropriate source
+            const userIntent = message.toLowerCase().includes('buy') ? `Buy ${toSymbol}` : 
+                              message.toLowerCase().includes('sell') ? `Sell ${fromSymbol}` :
+                              message.toLowerCase().includes('trade') ? `Trade ${fromSymbol} for ${toSymbol}` :
+                              `Swap ${fromSymbol} to ${toSymbol}`;
+            
+            exchangeText += `Ready to ${userIntent.toLowerCase()}?\nVisit: https://changenow.io\nSwap: ${fromSymbol} → ${toSymbol}`;
             
             // Update context awareness with exchange data
             updateContextAwareness('exchange_data', mentionedCoin.toLowerCase(), {
@@ -1212,39 +1261,30 @@ export default function Home() {
     }
     // Keep ChangeNOW bubble visible - building conversation bubble map
 
-    // Send message to Olivia - check WebSocket connection first
-    if (!isConnected) {
-      console.log('❌ WebSocket not connected, attempting to reconnect...')
-      // Try to connect before sending
-      connect()
+    // Send message to Olivia - new waitForConnection() logic handles everything
+    try {
+      console.log('📤 Sending message to Olivia AI...')
+      const result = await sendMessage(message)
       
-      // Show a helpful message to user
-      setTimeout(() => {
-        if (!isConnected) {
-          setMessages(prev => [...prev, { 
-            type: 'ai', 
-            content: 'Sorry, I\'m having trouble connecting to my AI service right now. Please try again in a moment. In the meantime, you can still see cryptocurrency data above!' 
-          }])
-          setIsLoading(false)
-          setShowInput(true)
-        }
-      }, 3000)
-      
-      // Still try to send message in case connection establishes quickly
-      try {
-        await sendMessage(message)
-      } catch (error) {
-        console.error('Failed to send message:', error)
+      if (!result) {
+        // sendMessage returned false - connection failed after waiting
         setMessages(prev => [...prev, { 
           type: 'ai', 
-          content: 'I\'m currently offline, but you can still get crypto data from the bubbles above! Try asking about Bitcoin, Ethereum, or other coins.' 
+          content: 'Sorry, I\'m having trouble connecting to my AI service right now. Please try again in a moment. In the meantime, you can still see cryptocurrency data above!' 
         }])
         setIsLoading(false)
         setShowInput(true)
       }
-    } else {
-      // WebSocket is connected, send normally
-      await sendMessage(message)
+      // If successful, the WebSocket message handler will take care of the response
+      
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      setMessages(prev => [...prev, { 
+        type: 'ai', 
+        content: 'I\'m currently offline, but you can still get crypto data from the bubbles above! Try asking about Bitcoin, Ethereum, or other coins.' 
+      }])
+      setIsLoading(false)
+      setShowInput(true)
     }
   }
 
@@ -1273,8 +1313,8 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-6 relative h-full w-full overflow-hidden bg-black">
       
-      {/* WebSocket Status Debug (top-left) */}
-      <div className={`fixed top-4 left-4 text-white p-2 text-xs z-50 rounded ${
+      {/* WebSocket Status Debug (bottom-right) */}
+      <div className={`fixed bottom-4 right-4 text-white p-2 text-xs z-50 rounded ${
         isConnected ? 'bg-green-600' : isConnecting ? 'bg-yellow-600' : 'bg-red-600'
       }`}>
         {isConnected ? '🟢 AI Connected' : 
@@ -1294,15 +1334,7 @@ export default function Home() {
         )}
       </div>
       
-      {/* User ID Display */}
-      {(principal || userData?.user_id) && (
-        <div className="fixed top-4 right-4 bg-green-600 text-white p-2 text-xs z-50 rounded">
-          {isAuthenticated && principal ? 
-            `🔐 ${principal.slice(0, 8)}...${principal.slice(-8)}` :
-            `👤 ${userData?.user_id || 'Guest'}`
-          }
-        </div>
-      )}
+
       
       {/* Animated Particles Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -1511,6 +1543,7 @@ export default function Home() {
           content={bubble.content}
           loading={bubble.loading}
           addParticlesToSwarm={addParticlesToSwarm}
+          originalQuery={bubble.originalQuery} // Pass the original user query for OpenAI extraction
         />
       ))}
       

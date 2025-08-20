@@ -1,5 +1,5 @@
 // src/components/TopNavigation.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { TonConnectButton, useTonWallet, useTonConnectUI } from '@tonconnect/ui-react';
 import { useInternetIdentity } from '../../contexts/InternetIdentityContext';
 import NotificationButton from '../ui/NotificationButton';
@@ -10,6 +10,7 @@ import { WalletAuthModal } from '../WalletAuthModal';
 import Button from '../ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { useAccountUpgrade } from '../../hooks/useAccountUpgrade';
+import icpLogo from '../../assets/icp-logo.jpg';
 
 export default function TopNavigation() {
   const wallet = useTonWallet();
@@ -18,7 +19,10 @@ export default function TopNavigation() {
   const { icpUser, icpInitialized } = useWebSocket();
   const { isAuthenticated: internetIdentityAuth, logout: logoutInternetIdentity, principal } = useInternetIdentity();
   const navigate = useNavigate();
-  // Remove isCreatingICP state since we're just triggering a conversation
+  
+  // Dropdown state
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   // Use the shared hook for wallet authentication logic
   const {
@@ -107,6 +111,27 @@ export default function TopNavigation() {
   const hasICPIdentity = icpInitialized && icpUser && icpUser.id;
   const icpIdDisplay = hasICPIdentity ? formatPrincipalId(icpUser.id) : null;
 
+  // Handle clicking outside dropdown to close it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    
+    if (isDropdownOpen) {
+      // Add a small delay to prevent immediate closure
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isDropdownOpen]);
+
   // Debug logging for ICP state changes
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -133,27 +158,106 @@ export default function TopNavigation() {
         wallet={wallet}
       />
 
-      <div className="px-4 py-4 z-10">
+      <div className="px-4 py-4" style={{ zIndex: 2147483646 }}>
         <div className="flex justify-between items-center">
-          <div className="relative">
+          {/* Left side - empty for now, could add logo */}
+          <div></div>
+          
+          {/* Right side - User dropdown */}
+          <div className="relative" ref={dropdownRef}>
             {isGuestUser ? (
-              <div className="flex items-center gap-2 flex-nowrap">
-                {hasICPIdentity ? (
-                  <>
-                    <div className="flex flex-col">
-                      <span className="text-green-400 text-xs">ICP ID</span>
-                      <span className="text-white text-sm font-mono">{icpIdDisplay}</span>
+              hasICPIdentity ? (
+                // ICP Guest User Dropdown
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDropdownOpen(prev => !prev);
+                    }}
+                    className="flex items-center gap-2 border-2 border-green-500 hover:border-green-400 text-white px-3 py-2 rounded-lg transition-colors bg-transparent hover:bg-green-500/10"
+                  >
+                    <img src={icpLogo} alt="ICP" className="w-5 h-5 rounded-full object-cover" />
+                    <span className="text-sm font-mono text-green-400">{icpIdDisplay}</span>
+                    <svg className={`w-4 h-4 transition-transform text-green-400 ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {isDropdownOpen && (
+                    <div 
+                      ref={dropdownRef}
+                      data-dropdown="icp-guest"
+                      className="absolute right-0 mt-2 w-80 bg-gray-800 rounded-lg shadow-xl border border-gray-700"
+                      style={{ 
+                        zIndex: 2147483647,
+                        pointerEvents: 'auto'
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="p-4">
+                        <div className="flex items-center gap-3 mb-4">
+                          <img src={icpLogo} alt="ICP" className="w-8 h-8 rounded-full object-cover" />
+                          <div>
+                            <div className="text-green-400 text-xs font-medium">ICP IDENTITY</div>
+                            <div className="text-white text-sm">Guest User</div>
+                          </div>
+                        </div>
+                        
+                        <div className="mb-4">
+                          <div className="text-gray-400 text-xs mb-1 flex items-center justify-between">
+                            <span>Complete ID:</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                navigator.clipboard.writeText(icpUser?.id?.toString() || '');
+                              }}
+                              className="text-green-400 hover:text-green-300 text-xs underline cursor-pointer"
+                              style={{ pointerEvents: 'auto' }}
+                            >
+                              Copy
+                            </button>
+                          </div>
+                          <div className="bg-gray-900 p-3 rounded border border-gray-600">
+                            <span className="text-green-300 font-mono text-xs break-all">
+                              {icpUser?.id?.toString() || 'Loading...'}
+                            </span>
+                          </div>
                     </div>
-                    <Button
-                      onPress={handleGuestLogout}
-                      className="bg-transparent text-white/70 underline text-sm"
-                      size="sm"
+                        
+                        <div className="space-y-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsDropdownOpen(false);
+                              handleCreateICPID();
+                            }}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded transition-colors"
+                          >
+                            Upgrade to Internet Identity
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              setIsDropdownOpen(false);
+                              handleGuestLogout();
+                            }}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded transition-colors cursor-pointer"
+                            style={{ pointerEvents: 'auto' }}
                     >
                       Logout
-                    </Button>
-                  </>
-                ) : (
-                  <>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Guest Mode (no ICP)
+                <div className="flex items-center gap-2 flex-nowrap">
                     <span className="text-gray-400 text-sm">Guest Mode</span>
                     <Button
                       onPress={handleGuestLogout}
@@ -169,28 +273,87 @@ export default function TopNavigation() {
                     >
                       Create ICP ID
                     </Button>
-                  </>
-                )}
               </div>
+              )
             ) : internetIdentityAuth ? (
-              // Show Internet Identity info and logout button
-              <div className="flex items-center gap-2 flex-nowrap">
-                <div className="flex flex-col">
-                  <span className="text-blue-400 text-xs">Internet Identity</span>
-                  <span className="text-white text-sm font-mono">
-                    {principal ? formatPrincipalId(principal) : 'Connected'}
+              // Internet Identity User Dropdown
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDropdownOpen(prev => !prev);
+                  }}
+                  className="flex items-center gap-2 border-2 border-blue-500 hover:border-blue-400 text-white px-3 py-2 rounded-lg transition-colors bg-transparent hover:bg-blue-500/10"
+                >
+                  <img src={icpLogo} alt="ICP" className="w-5 h-5 rounded-full object-cover" />
+                  <span className="text-sm font-mono text-blue-400">{principal ? formatPrincipalId(principal) : 'Connected'}</span>
+                  <svg className={`w-4 h-4 transition-transform text-blue-400 ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {isDropdownOpen && (
+                  <div 
+                    ref={dropdownRef}
+                    data-dropdown="internet-identity"
+                    className="absolute right-0 mt-2 w-80 bg-gray-800 rounded-lg shadow-xl border border-gray-700"
+                      style={{ 
+                        zIndex: 2147483647,
+                        pointerEvents: 'auto'
+                      }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="p-4">
+                      <div className="flex items-center gap-3 mb-4">
+                        <img src={icpLogo} alt="ICP" className="w-8 h-8 rounded-full object-cover" />
+                        <div>
+                          <div className="text-blue-400 text-xs font-medium">INTERNET IDENTITY</div>
+                          <div className="text-white text-sm">Authenticated</div>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-4">
+                        <div className="text-gray-400 text-xs mb-1 flex items-center justify-between">
+                          <span>Principal ID:</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              navigator.clipboard.writeText(principal?.toString() || '');
+                            }}
+                            className="text-blue-400 hover:text-blue-300 text-xs underline cursor-pointer"
+                            style={{ pointerEvents: 'auto' }}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        <div className="bg-gray-900 p-3 rounded border border-gray-600">
+                          <span className="text-blue-300 font-mono text-xs break-all">
+                            {principal?.toString() || 'Loading...'}
                   </span>
                 </div>
-                <Button
-                  onPress={handleLogout}
-                  className="bg-transparent text-white/70 underline text-sm"
-                  size="sm"
+                      </div>
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setIsDropdownOpen(false);
+                          handleLogout();
+                        }}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded transition-colors cursor-pointer"
+                        style={{ pointerEvents: 'auto' }}
                 >
                   Logout
-                </Button>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : wallet ? (
-              // Show TON wallet info and logout button
+              // TON Wallet User
               <div className="flex items-center gap-2 flex-nowrap">
                 <div className="flex flex-col">
                   <span className="text-cyan-400 text-xs">TON Wallet</span>
@@ -212,9 +375,13 @@ export default function TopNavigation() {
             ) : (
               <TonConnectButton className="!text-base bg-transparent" />
             )}
+            
+            {/* Notifications */}
+            {!isGuestUser && (
+              <div className="ml-4">
+                <NotificationButton />
           </div>
-          <div className="flex items-center gap-2 flex-nowrap">
-            {!isGuestUser && <NotificationButton />}
+            )}
           </div>
         </div>
       </div>

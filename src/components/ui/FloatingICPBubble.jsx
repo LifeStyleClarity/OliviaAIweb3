@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
 import { createPortal } from 'react-dom';
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { CheckCircle, AlertCircle, Loader, Wifi, WifiOff, Shield, User } from 'lucide-react';
 import icpLogo from '../../assets/icp-logo.jpg';
 
 const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = '', loading = false, status = 'error', addParticlesToSwarm }) => {
@@ -21,17 +23,10 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
 
     const interval = setInterval(() => {
       setPosition(prev => {
-        // Dynamic bubble size based on content length and expanded state
-        let bubbleSize = 128; // Base collapsed size
-        if (isExpanded && typeof content === 'string') {
-          // Calculate size based on content length
-          const lines = content.split('\n').length;
-          const avgLineLength = content.length / lines;
-          const estimatedWidth = Math.max(250, Math.min(350, avgLineLength * 8 + 100));
-          const estimatedHeight = Math.max(200, lines * 20 + 80);
-          bubbleSize = Math.max(estimatedWidth, estimatedHeight);
-        } else if (isExpanded) {
-          bubbleSize = 250; // Default expanded size
+        // Dynamic bubble size based on expanded state
+        let bubbleSize = 140; // Base collapsed size
+        if (isExpanded) {
+          bubbleSize = 320; // Fixed size for visual status display
         }
         const margin = 20;
         
@@ -99,17 +94,10 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
   const createPopEffect = () => {
     if (!addParticlesToSwarm) return;
     
-    // Dynamic bubble size based on content length and expanded state
-    let bubbleSize = 128; // Base collapsed size
-    if (isExpanded && typeof content === 'string') {
-      // Calculate size based on content length
-      const lines = content.split('\n').length;
-      const avgLineLength = content.length / lines;
-      const estimatedWidth = Math.max(250, Math.min(350, avgLineLength * 8 + 100));
-      const estimatedHeight = Math.max(200, lines * 20 + 80);
-      bubbleSize = Math.max(estimatedWidth, estimatedHeight);
-    } else if (isExpanded) {
-      bubbleSize = 250; // Default expanded size
+    // Dynamic bubble size based on expanded state
+    let bubbleSize = 140; // Base collapsed size
+    if (isExpanded) {
+      bubbleSize = 320; // Fixed size for visual status display
     }
     const bubbleCenter = {
       x: position.x + bubbleSize / 2, // Actual bubble center
@@ -223,7 +211,13 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
 
   const theme = colors[status] || colors.error;
   
-  const bubbleSize = isExpanded ? 200 : 128;
+  // Dynamic bubble size based on content length and expanded state
+  let bubbleSize = 140; // Base collapsed size
+  if (isExpanded) {
+    // Fixed size for visual status display - no scrolling needed
+    bubbleSize = 320; // Optimized size for icon-based content
+  }
+  
   const bubbleWidth = bubbleSize;
   const bubbleHeight = bubbleSize;
   
@@ -243,63 +237,147 @@ const FloatingICPBubble = ({ isOpen, onClose, title = 'ICP Status', content = ''
       data-bubble="icp"
       data-bubble-id={bubbleId}
     >
-      <div className={`w-full h-full bg-transparent border ${theme.border} rounded-full shadow-2xl flex flex-col overflow-hidden relative`} style={{boxShadow: theme.shadow}}>
-        {/* Neon glowing border effect */}
-        <div className={`absolute inset-0 rounded-full border ${theme.glowBorder} animate-pulse`} style={{boxShadow: theme.glowShadow}}></div>
+      <div className="w-full h-full bg-gradient-to-br from-black/80 via-black/90 to-black/95 border-2 border-green-400 rounded-full shadow-2xl flex flex-col overflow-hidden relative backdrop-blur-sm" style={{boxShadow: '0 0 30px #4ade80, inset 0 0 20px rgba(74, 222, 128, 0.15)'}}>
+        {/* Enhanced neon green glowing border effect */}
+        <div className="absolute inset-0 rounded-full border border-green-300/60 animate-pulse" style={{boxShadow: '0 0 25px #4ade80, 0 0 50px rgba(74, 222, 128, 0.3)'}}></div>
         
-        {/* ICP Logo at top */}
-        <div className="absolute top-1 left-1/2 transform -translate-x-1/2 z-10">
-          <div className={`w-6 h-6 rounded-full overflow-hidden border ${theme.border} shadow-lg`}>
-            <img src={icpLogo} alt="ICP Logo" className="w-full h-full object-cover" />
-          </div>
-        </div>
+        {/* Ambient glow overlay */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-t from-green-500/5 via-transparent to-green-400/10 animate-pulse" style={{animationDuration: '3s'}}></div>
 
-        {/* Close button */}
+        {/* Enhanced close button */}
         <button
           onClick={onClose}
-          className={`absolute top-0.5 right-0.5 text-white hover:text-red-400 w-4 h-4 rounded-full bg-black/30 hover:bg-black/50 transition-all text-xs font-bold flex items-center justify-center border ${theme.border}/50 z-10`}
+          className="absolute top-1 right-1 text-white hover:text-red-400 w-5 h-5 rounded-full bg-black/50 hover:bg-red-500/20 transition-all duration-300 text-xs font-bold flex items-center justify-center border border-green-400/50 hover:border-red-400/70 z-20 hover:shadow-lg hover:shadow-red-400/30"
           aria-label="Close"
         >
           ×
         </button>
         
-        {/* Content area */}
-        <div className="flex-1 pt-6 pb-2 px-1 overflow-hidden flex items-center justify-center relative z-10">
+        {/* Spherical Content Area */}
+        <div className="absolute inset-4 flex items-center justify-center">
           {loading ? (
-            <div className="text-white font-medium animate-pulse text-center">
-              <div className="flex items-center gap-1 justify-center mb-1">
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+            <div className="text-white font-medium animate-pulse text-center flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-green-400 shadow-lg shadow-green-500/40 mb-2 bg-black/20">
+                <img 
+                  src={icpLogo} 
+                  alt="ICP Logo" 
+                  className="w-full h-full object-cover opacity-50"
+                />
               </div>
-              <div className="text-xs font-semibold">Loading</div>
+              <div className="flex items-center gap-1 justify-center mb-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+              </div>
+              <div className="text-xs font-semibold text-green-400">Loading...</div>
             </div>
           ) : (
-            <div className="text-white w-full h-full flex items-center justify-center text-center">
+            <div className="w-full h-full flex items-center justify-center text-center relative">
               {!isExpanded ? (
-                // Collapsed: Show just one key line
-                <div className="text-xs font-bold leading-tight px-2">
-                  {(() => {
-                    if (typeof content === 'string') {
-                      // Extract first meaningful line (status info)
-                      const lines = content.split('\n').filter(line => line.trim());
-                      const statusLine = lines.find(line => 
-                        line.includes('Status:') || 
-                        line.includes('Connected') ||
-                        line.includes('Error') ||
-                        line.includes('ICP')
-                      );
-                      return statusLine || lines[0] || content.substring(0, 30) + '...';
-                    }
-                    return 'Click to expand';
-                  })()}
+                // Collapsed: Central icon with title below in spherical layout
+                <div className="flex flex-col items-center justify-center">
+                  {/* Central ICP Icon */}
+                  <div className="relative mb-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-4 border-green-400 shadow-2xl shadow-green-500/60 bg-gradient-to-br from-green-400/30 to-green-600/40 hover:border-green-300 transition-all duration-300 hover:shadow-green-400/80 hover:scale-105 group">
+                      <img 
+                        src={icpLogo} 
+                        alt="ICP Logo" 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                      {/* Inner circular glow */}
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-t from-transparent via-green-400/10 to-green-300/20"></div>
+                    </div>
+                    {/* Pulsing outer ring */}
+                    <div className="absolute inset-0 rounded-full border-2 border-green-300/40 animate-ping" style={{animationDuration: '3s'}}></div>
+                  </div>
+                  
+                  {/* Circular text layout */}
+                  <div className="text-center">
+                    <div className="text-xs font-bold text-green-300 drop-shadow-xl">{title}</div>
+                  </div>
                 </div>
               ) : (
-                // Expanded: Show all details
-                <div className="text-xs leading-relaxed break-words w-full h-full px-4 py-3 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="whitespace-pre-wrap font-medium">
-                      {content}
+                // Expanded: Spherical content organization
+                <div className="w-full h-full relative flex flex-col items-center justify-center p-6">
+                  {/* Top section - Icon and title in circular arc */}
+                  <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-green-400 shadow-lg shadow-green-500/40 bg-gradient-to-br from-green-400/20 to-green-600/30 mb-2">
+                      <img 
+                        src={icpLogo} 
+                        alt="ICP Logo" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="text-sm font-bold text-green-300 drop-shadow-lg">{title}</div>
+                    <div className="text-xs text-white/70 font-medium">Network Status</div>
+                  </div>
+                  
+                  {/* Central content area - visual status display */}
+                  <div className="flex-1 flex items-center justify-center mt-16 mb-6 max-w-full">
+                    <div className="text-center px-4 space-y-4">
+                      {/* Parse and display content with icons */}
+                      {(() => {
+                        if (typeof content !== 'string') return null;
+                        
+                        const lines = content.split('\n').filter(line => line.trim());
+                        const isConnected = content.includes('Connected');
+                        const isError = content.includes('Error') || status === 'error';
+                        const isConnecting = content.includes('Connecting') || status === 'connecting';
+                        const backendActive = content.includes('Backend: Active');
+                        const isAuthenticated = content.includes('Auth: Authenticated');
+                        const hasPrincipal = content.includes('Principal:') && !content.includes('Principal: None');
+                        
+                        return (
+                          <div className="space-y-3">
+                            {/* Main Status */}
+                            <div className="flex items-center justify-center gap-2">
+                              {isConnected ? (
+                                <CheckCircle className="w-6 h-6 text-green-400" />
+                              ) : isError ? (
+                                <AlertCircle className="w-6 h-6 text-red-400" />
+                              ) : (
+                                <Loader className="w-6 h-6 text-yellow-400 animate-spin" />
+                              )}
+                              <span className={`font-bold text-lg ${isConnected ? 'text-green-400' : isError ? 'text-red-400' : 'text-yellow-400'}`}>
+                                {isConnected ? 'Connected' : isError ? 'Error' : 'Connecting'}
+                              </span>
+                            </div>
+                            
+                            {/* Network Status */}
+                            <div className="space-y-2">
+                              {/* Backend Status */}
+                              <div className="flex items-center justify-center gap-2">
+                                {backendActive ? (
+                                  <Wifi className="w-4 h-4 text-green-400" />
+                                ) : (
+                                  <WifiOff className="w-4 h-4 text-orange-400" />
+                                )}
+                                <span className={`text-sm ${backendActive ? 'text-green-300' : 'text-orange-300'}`}>
+                                  Backend: {backendActive ? 'Active' : 'Offline'}
+                                </span>
+                              </div>
+                              
+                              {/* Auth Status */}
+                              <div className="flex items-center justify-center gap-2">
+                                <Shield className={`w-4 h-4 ${isAuthenticated ? 'text-green-400' : 'text-blue-400'}`} />
+                                <span className={`text-sm ${isAuthenticated ? 'text-green-300' : 'text-blue-300'}`}>
+                                  Auth: {isAuthenticated ? 'Authenticated' : 'Available'}
+                                </span>
+                              </div>
+                              
+                              {/* Principal Status */}
+                              {hasPrincipal && (
+                                <div className="flex items-center justify-center gap-2">
+                                  <User className="w-4 h-4 text-blue-400" />
+                                  <span className="text-sm text-blue-300">
+                                    Principal: Connected
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

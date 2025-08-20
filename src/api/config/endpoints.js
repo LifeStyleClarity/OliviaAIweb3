@@ -3,12 +3,26 @@ const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL || 'https://api.exa
 const API_GATEWAY_TON_URL = import.meta.env.VITE_API_GATEWAY_TON_URL || 'https://ton-api.example.com';
 export const API_GATEWAY_JWT = import.meta.env.VITE_API_GATEWAY_JWT;
 
+// Secure OpenAI Microservice Configuration
+const OPENAI_MICROSERVICE_URL = import.meta.env.VITE_OPENAI_MICROSERVICE_URL || 'http://localhost:3001';
+const OPENAI_MICROSERVICE_TOKEN = import.meta.env.VITE_OPENAI_MICROSERVICE_TOKEN;
+const SECURE_WEBSOCKET_URL = OPENAI_MICROSERVICE_URL.replace('http', 'ws') + '/ws/secure-proxy';
+
 export const ENDPOINTS = {
     WEBSOCKET: {
         CHAT: `${WS_BASE_URL}/ws/chat`,
         AGENT_CHAT: `${WS_BASE_URL}/ws/chat/agents`,
         AUDIO: `${WS_BASE_URL}/ws/audio`,
         GET_INTRO_MESSAGE: `${WS_BASE_URL}/ws/intro-message`,
+        // Secure WebSocket via OpenAI Microservice
+        SECURE_PROXY: SECURE_WEBSOCKET_URL,
+    },
+    OPENAI_MICROSERVICE: {
+        BASE_URL: OPENAI_MICROSERVICE_URL,
+        CHAT_COMPLETIONS: `${OPENAI_MICROSERVICE_URL}/api/openai/chat/completions`,
+        EXTRACT_TRADING: `${OPENAI_MICROSERVICE_URL}/api/openai/extract-trading`,
+        HEALTH: `${OPENAI_MICROSERVICE_URL}/api/health`,
+        WEBSOCKET_STATS: `${OPENAI_MICROSERVICE_URL}/api/websocket/stats`,
     },
     TOKENS: {
         GET_BY_ADDRESS: `${API_GATEWAY_URL}/tokens/by-token-address/:token_address`,
@@ -81,4 +95,11 @@ export const ENDPOINTS = {
 
 export const DEFAULT_HEADERS = {
     'Content-Type': 'application/json',
+};
+
+// Export OpenAI Microservice configuration
+export const OPENAI_MICROSERVICE_CONFIG = {
+    URL: OPENAI_MICROSERVICE_URL,
+    TOKEN: OPENAI_MICROSERVICE_TOKEN,
+    WEBSOCKET_URL: SECURE_WEBSOCKET_URL
 };

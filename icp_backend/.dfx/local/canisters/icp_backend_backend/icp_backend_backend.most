@@ -1,5 +1,5 @@
 // Version: 1.0.0
-type ChatMessage__721991421 =
+type ChatMessage__491016132 =
   {
     aiResponse : Text;
     conversationId : Text;
@@ -9,7 +9,7 @@ type ChatMessage__721991421 =
     userId : Principal;
     userMessage : Text
   };
-type User__313518328 =
+type User__792575920 =
   {
     createdAt : Int;
     email : Text;
@@ -21,6 +21,6 @@ type User__313518328 =
     walletAddress : ?Text
   };
 actor {
-  stable var messageEntries : [(Text, ChatMessage__721991421)];
-  stable var userEntries : [(Principal, User__313518328)]
+  stable var messageEntries : [(Text, ChatMessage__491016132)];
+  stable var userEntries : [(Principal, User__792575920)]
 };
