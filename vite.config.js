@@ -20,8 +20,9 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/lurky/, ''),
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => {
-            const apiKey = '4xxIvRdkAhVISB6nKzUGclWVQnh-oVymYw3VNDrtdeg';
-            proxyReq.setHeader('x-lurky-api-key', apiKey);
+            // SECURITY: API key moved to microservice - this proxy is now disabled
+            // All Lurky requests should go through the secure microservice
+            console.warn('⚠️ Direct Lurky proxy is disabled. Use microservice endpoints instead.');
           });
         }
       }

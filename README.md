@@ -1,265 +1,443 @@
-# Beta Wallet V2 Documentation
+# Olivia AI - Web3 AI Assistant Platform
 
-## Project Overview
-Beta Wallet V2 is a React-based web application that integrates blockchain functionality with an AI assistant named Olivia. The application provides features for portfolio management, trading, social sentiment analysis, and AI-assisted interactions through both text and voice interfaces.
+A decentralized AI assistant platform that combines blockchain technology, real-time AI communication, and cryptocurrency trading tools into a unified Web3 experience.
 
-## Tech Stack
-- **Frontend Framework**: React 18.2.0 with Vite
-- **Styling**: TailwindCSS
-- **UI Components**: @heroui/react
-- **Routing**: react-router-dom
-- **Blockchain Integration**: @tonconnect/ui-react
-- **Audio Processing**: wavesurfer.js
-- **Animations**: framer-motion
-- **Notifications**: sonner
-- **Crypto**: crypto-js (for API authentication)
+## 🏗️ Architecture Overview
 
-## Project Structure
-```
-src/
-├── api/                  # API integration layer
-│   ├── config/          # API configuration and setup
-│   │   ├── endpoints.js     # API endpoints configuration
-│   │   ├── axios.js         # Main API axios instance
-│   │   └── axios-profile.js # Profile API axios instance
-│   ├── services/        # Service implementations
-│   │   ├── auth.service.js      # User authentication and management
-│   │   ├── portfolio.service.js # TON Portfolio microservice
-│   │   ├── social.service.js    # Social data with auth
-│   │   ├── chat.service.js      # WebSocket chat functionality
-│   │   ├── notification.service.js # User notifications
-│   │   ├── trade.service.js     # Trade operations
-│   │   └── profile.service.js   # User profile settings
-│   ├── types/           # TypeScript-like type definitions
-│   │   ├── auth.types.js        # Authentication type definitions
-│   │   ├── portfolio.types.js   # Portfolio type definitions
-│   │   ├── social.types.js      # Social data type definitions
-│   │   ├── notification.types.js # Notification type definitions
-│   │   └── trade.types.js       # Trade type definitions
-│   └── index.js         # Central export point
-├── components/
-│   ├── AgentDataViews/  # Components for displaying agent-related data
-│   ├── features/        # Feature-specific components
-│   │   ├── home/       # Home page features
-│   │   ├── explore/    # Explore page features
-│   │   └── portfolio/  # Portfolio page features
-│   ├── layout/         # Layout components
-│   └── ui/             # Reusable UI components
-├── hooks/              # Custom React hooks
-├── pages/              # Page components
-├── utils/             # Utility functions
-└── docs/              # Component and API documentation
-    ├── API.md         # API documentation
-    └── HEROUI/        # HeroUI component documentation
+This project consists of three main components:
+
+### 1. **React Frontend** (`src/`)
+- Modern React 18 SPA with real-time AI chat interface
+- Multi-blockchain authentication (ICP, TON, Telegram)
+- Immersive crypto data visualizations
+- WebSocket-based streaming AI responses
+
+### 2. **Node.js Microservice** (`microservice/`)
+- Secure API gateway for external services
+- WebSocket proxy for real-time LLM communication
+- Authentication and rate limiting middleware
+- Integration with multiple crypto APIs
+
+### 3. **ICP Backend** (`icp_backend/`)
+- Motoko canister for decentralized data storage
+- Persistent chat history on Internet Computer blockchain
+- User management with Internet Identity integration
+
+```mermaid
+graph TD
+    A[React Frontend] <--> B[Node.js Microservice]
+    B <--> C[LLM APIs]
+    B <--> D[Crypto APIs]
+    A <--> E[ICP Canister]
+    A <--> F[TON Blockchain]
+    A <--> G[Telegram WebApp]
 ```
 
-## Core Features
+## 🚀 Tech Stack
 
-### 1. Authentication
-- Protected route system implemented in `App.jsx`
-- Authentication state management with React context
-- Login page with redirect functionality
-- Daily rotating API secret keys for enhanced security
+### Frontend
+- **Framework**: React 18 + Vite
+- **Styling**: TailwindCSS + HeroUI
+- **Web3**: @tonconnect/ui-react, @dfinity/agent
+- **Real-time**: WebSocket API
+- **Charts**: Chart.js + D3.js
+- **Animation**: Framer Motion
 
-### 2. API Integration
-The application uses a modular API structure with multiple services:
+### Microservice
+- **Runtime**: Node.js + Express
+- **Security**: Helmet, CORS, Rate Limiting
+- **WebSocket**: ws library for proxy connections
+- **Authentication**: JWT tokens
 
-#### Portfolio Service (TON Microservice)
-- Handles portfolio data retrieval and management
-- Direct integration with TON blockchain
-- Custom authentication mechanism
-- Formats and calculates additional portfolio metrics
+### ICP Backend
+- **Language**: Motoko
+- **Platform**: Internet Computer Protocol
+- **Storage**: Stable memory with HashMap
 
-#### Social Service
-- Manages social data and influencer information
-- Includes cashtag tracking and token mentions
-- Secured with daily rotating secret keys
-- Aggregates social sentiment data
+## 🔧 Setup Instructions
 
-#### Chat Service
-- Handles WebSocket communication for text and audio chat
-- Supports different message types and action responses
-- Manages audio conversion between Blob and Base64 formats
-- Provides message formatting and parsing utilities
+### Prerequisites
+- Node.js 18+
+- DFX (Internet Computer SDK) - [Install Guide](https://internetcomputer.org/docs/current/developer-docs/setup/install/)
+- Environment variables configured
 
-#### Trade Service
-- Manages cryptocurrency trade operations
-- Supports creating, updating, and deleting trades
-- Tracks trade status and history
-- Handles error cases with appropriate fallbacks
-
-#### Profile Service
-- Manages user profile settings and preferences
-- Handles trade style and risk profile configuration
-- Supports wallet management and aggregation
-- Provides default settings for new users
-
-#### Notification Service
-- Manages user notifications
-- Supports marking notifications as read
-- Handles notification deletion and updates
-- Filters notifications by user ID
-
-For detailed API documentation with examples and type definitions, see [API Documentation](src/docs/API.md).
-
-### 3. AI Assistant (Olivia)
-The application features an AI assistant named Olivia that provides interactive support through both text and voice interfaces.
-
-#### Text Chat Implementation
-- WebSocket-based real-time communication
-- Message handling with retry mechanism
-- Support for different types of responses (conversation, actions)
-- Implemented in `useChatWebSocket.js`
-
-Key Features:
-```javascript
-const { sendMessage, disconnect, isBotResponding } = useChatWebSocket(onMessageReceived);
-```
-
-#### Voice Chat Implementation
-- Audio WebSocket connection for voice interactions
-- Base64 audio processing
-- Automatic reconnection handling
-- Implemented in `useAudioWebSocket.js`
-
-Key Features:
-```javascript
-const { sendAudio, disconnect } = useAudioWebSocket(onMessageReceived);
-```
-
-### 4. Trading Features
-- Portfolio value tracking
-- Trading token analysis
-- Influencer sentiment tracking
-- Market trend analysis
-
-### 5. Chat Interface
-The chat interface is implemented through several components:
-
-#### ChatModal
-- Main container for chat functionality
-- Handles message state and WebSocket connections
-- Manages audio and text message processing
-- Located in `src/components/ui/ChatModal.jsx`
-
-#### ChatInput
-- Handles text input and audio recording
-- Supports agent-specific messages
-- Disabled state during bot responses
-
-#### ChatMessages
-- Displays conversation history
-- Supports different message types (text, audio)
-- Message update functionality
-
-## WebSocket Communication
-
-### Chat WebSocket
-- Endpoint: `${VITE_WEBSOCKET_URL}/api/v1/ws/chat`
-- Handles text-based communication
-- Supports retry mechanism with exponential backoff
-- Maximum retry attempts: 3
-
-Message Format:
-```javascript
-{
-  user_id: string,
-  user_input: string,
-  trade_style: string,
-  messages: Array<{
-    role: "user" | "assistant",
-    content: string,
-    type: string,
-    created_at: string,
-    message_id: string
-  }>
-}
-```
-
-### Audio WebSocket
-- Endpoint: `${VITE_WEBSOCKET_URL}/api/v1/ws/audio`
-- Handles voice-based communication
-- Supports audio blob processing
-- Automatic reconnection with exponential backoff
-
-Audio Message Format:
-```javascript
-{
-  metadata: {
-    user_id: string,
-    trade_style: string,
-    file_type: string
-  },
-  audio: string, // base64 encoded audio
-  messages: Array<Message>
-}
-```
-
-## Development Setup
-
-1. Install dependencies:
+#### Installing DFX (Internet Computer SDK)
 ```bash
+# Install DFX
+sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+
+# Verify installation
+dfx --version
+
+# Create new identity (optional, for production deployments)
+dfx identity new <your-identity-name>
+dfx identity use <your-identity-name>
+```
+
+### 1. Frontend Setup
+```bash
+# Install dependencies
 npm install
-```
 
-2. Create `.env` file with required environment variables:
-```
-VITE_WEBSOCKET_URL=your_websocket_url        # WebSocket server URL
-VITE_API_BASE_URL=your_api_url               # Main API base URL
-VITE_TON_API=your_ton_api_url                # TON blockchain API URL
-VITE_SECRET=your_secret_key                  # Secret key for API authentication
-VITE_TOKEN_TRACKER_API_URL=your_tracker_url  # Token tracker API URL
-```
-
-3. Start development server:
-```bash
+# Start development server
 npm run dev
-```
 
-4. Build for production:
-```bash
+# Build for production
 npm run build
 ```
 
-For more details on API configuration, see the [API Documentation](src/docs/API.md#environment-configuration).
+### 2. Microservice Setup
+```bash
+cd microservice
 
-## Best Practices
+# Install dependencies
+npm install
 
-1. **API Integration**
-   - Use appropriate service for each feature
-   - Implement proper error handling
-   - Follow type definitions for data structures
-   - Use [axiosInstance](src/api/config/axios.js) for authenticated requests
+# Configure environment variables
+cp .env.example .env
+# Edit .env with your API keys and configuration
 
-2. **WebSocket Error Handling**
-   - Implement retry mechanisms with exponential backoff
-   - Provide user feedback through toast notifications
-   - Clean up connections on component unmount
+# Start microservice
+npm run dev
+```
 
-3. **State Management**
-   - Use React context for global state (see [AuthContext](src/contexts/AuthContext.jsx) and [ChatContext](src/contexts/ChatContext.jsx))
-   - Implement proper cleanup in useEffect hooks
-   - Maintain message history state
+### 3. ICP Backend Setup
+```bash
+# Start local ICP network
+npm run icp:start
 
-4. **Audio Processing**
-   - Convert audio blobs to base64 for transmission
-   - Handle audio playback with proper error checking (see [AudioPlayback](src/components/ui/microphone/AudioPlayback.jsx))
-   - Implement proper cleanup of audio resources
+# Deploy canister (will generate new canister ID)
+npm run icp:deploy
 
-5. **UI/UX Considerations**
-   - Show loading states during processing
-   - Provide visual feedback for user actions
-   - Implement proper error handling and user notifications
+# Note the canister ID from deployment output
+# Update your frontend .env with: VITE_ICP_CANISTER_ID=<your_new_canister_id>
 
-For more detailed implementation guidelines, refer to the [API Documentation](src/docs/API.md#best-practices).
+# Check canister status
+npm run icp:status
+```
 
-## Contributing
+## 📁 Project Structure
+
+```
+OliviaAIweb3/
+├── src/                          # React Frontend
+│   ├── components/
+│   │   ├── auth/                 # Authentication components
+│   │   ├── features/             # Feature-specific components
+│   │   ├── layout/               # App layout components
+│   │   └── ui/                   # Reusable UI components
+│   ├── contexts/                 # React Context providers
+│   ├── hooks/                    # Custom React hooks
+│   ├── api/                      # API services and configuration
+│   └── pages/                    # Route components
+├── microservice/                 # Node.js API Gateway
+│   ├── src/
+│   │   ├── controllers/          # API route handlers
+│   │   ├── middleware/           # Security and validation
+│   │   ├── routes/               # API route definitions
+│   │   └── services/             # Business logic services
+│   └── tests/                    # Test suites
+├── icp_backend/                  # Internet Computer Backend
+│   └── src/
+│       └── icp_backend_backend/
+│           └── main.mo           # Motoko canister code
+└── public/                       # Static assets
+```
+
+## 🔐 Authentication System
+
+The platform supports multiple authentication methods:
+
+### Internet Identity (ICP)
+- Blockchain-based identity using Face ID/Touch ID
+- Stores data permanently on Internet Computer
+- No passwords required
+
+### TON Connect
+- TON blockchain wallet integration
+- Supports hardware and software wallets
+- Automatic account linking
+
+### Telegram WebApp
+- Native Telegram bot integration
+- Seamless user experience within Telegram
+- Social authentication
+
+### Guest Mode
+- Temporary access without registration
+- Limited features with upgrade prompts
+- Easy conversion to permanent accounts
+
+## 🌐 Real-Time Communication
+
+### WebSocket Architecture
+The platform uses a sophisticated WebSocket system for real-time AI communication:
+
+```javascript
+// WebSocket connection through secure microservice proxy
+const wsUrl = `${MICROSERVICE_URL}/ws/secure-proxy?token=${AUTH_TOKEN}`;
+const ws = new WebSocket(wsUrl);
+
+// Handle streaming AI responses
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  switch(message.type) {
+    case 'ai_response_chunk':
+      // Handle streaming response
+      break;
+    case 'action_request':
+      // Handle AI action requests
+      break;
+  }
+};
+```
+
+### Features
+- **Secure Proxy**: All LLM communication routed through authenticated microservice
+- **Auto-Reconnection**: Exponential backoff with multiple endpoint fallback
+- **Heartbeat Monitoring**: Connection health checks every 30 seconds
+- **Message Queuing**: Handles offline scenarios gracefully
+
+## 💰 Crypto Integration
+
+### Supported Services
+- **Market Data**: Real-time cryptocurrency prices and analytics
+- **Exchange Integration**: Swap and trading functionality
+- **Blockchain Data**: On-chain analytics and insights
+- **DEX Integration**: Decentralized exchange connections
+
+### Floating Data Bubbles
+Interactive data overlays that appear contextually during AI conversations:
+
+```javascript
+// Example: Price bubble appears when crypto is mentioned
+const FloatingPriceBubble = ({ coin, data }) => {
+  // Dynamic positioning and content based on AI context
+  return (
+    <div className="floating-bubble" style={{ 
+      position: 'absolute',
+      left: position.x,
+      top: position.y 
+    }}>
+      {/* Real-time price data */}
+    </div>
+  );
+};
+```
+
+## 🛡️ Security Features
+
+### Frontend Security
+- **Content Security Policy**: Helmet.js security headers
+- **Origin Validation**: CORS protection with specific origins
+- **Input Sanitization**: XSS protection on all user inputs
+- **Token Management**: Secure storage of authentication tokens
+
+### Microservice Security
+- **Rate Limiting**: Configurable request limits per endpoint
+- **JWT Authentication**: Token-based API access control
+- **Environment Variables**: Sensitive data stored in environment
+- **Proxy Pattern**: API keys hidden behind secure microservice
+
+### ICP Security
+- **Identity-Based Access**: Each user's data isolated by Principal ID
+- **Blockchain Storage**: Immutable and verifiable data storage
+- **Upgrade Safety**: Stable memory preserves data during updates
+
+## 🎨 UI/UX Features
+
+### Design System
+- **Dark Theme**: Modern dark UI with neon accents
+- **Responsive Design**: Mobile-first approach with desktop optimization
+- **Animations**: Smooth transitions using Framer Motion
+- **Typography**: Custom prose styling for markdown content
+
+### Interactive Elements
+- **Voice Input**: Audio recording and transcription
+- **Drag & Drop**: Moveable data bubbles and components
+- **Real-time Updates**: Live data streaming and updates
+- **Context Menus**: Right-click actions and shortcuts
+
+## 🔄 State Management
+
+### React Context Architecture
+```javascript
+// Provider hierarchy from main.jsx
+<AuthProvider>           // User authentication state
+  <InternetIdentityProvider>  // ICP identity management
+    <WebSocketProvider>        // Real-time connection state
+      <ChatProvider>           // Chat-specific state
+        <App />
+      </ChatProvider>
+    </WebSocketProvider>
+  </InternetIdentityProvider>
+</AuthProvider>
+```
+
+### Key Contexts
+- **AuthContext**: Multi-auth state management
+- **WebSocketContext**: Real-time communication
+- **InternetIdentityContext**: ICP blockchain integration
+- **ChatContext**: Conversation state and history
+
+## 📊 Data Flow
+
+### Chat Message Flow
+1. User inputs message in chat interface
+2. Frontend sends via WebSocket to microservice proxy
+3. Microservice routes to appropriate LLM API
+4. Streaming response flows back through WebSocket
+5. Frontend renders real-time response with typing animation
+6. Completed conversation saved to ICP blockchain
+
+### Crypto Data Flow
+1. AI mentions cryptocurrency in response
+2. Frontend detects crypto keywords
+3. Relevant API calls made through microservice
+4. Data formatted and displayed in floating bubbles
+5. User can interact with bubbles for more details
+
+## 🧪 Development
+
+### Environment Variables
+Create `.env` files in both root and microservice directories:
+
+```bash
+# Frontend (.env)
+VITE_API_GATEWAY_URL=your_api_gateway_url
+VITE_OPENAI_MICROSERVICE_URL=http://localhost:3001
+VITE_APP_ACCESS_TOKEN=your_access_token
+VITE_ICP_CANISTER_ID=<canister_id_from_dfx_deploy>
+
+# Microservice (.env)
+PORT=3001
+NODE_ENV=development
+ADMIN_ACCESS_SECRET=your_admin_secret
+LLM_API_KEY=your_llm_api_key
+CRYPTO_API_KEYS=your_crypto_api_keys
+ALLOWED_ORIGIN=http://localhost:3000
+EXTERNAL_WEBSOCKET_URLS=your_llm_websocket_endpoints
+```
+
+### Scripts
+```bash
+# Development
+npm run dev                    # Start frontend only
+npm run setup                  # Full development setup
+
+# ICP Commands
+npm run icp:start             # Start local ICP network
+npm run icp:deploy            # Deploy canister
+npm run icp:clean             # Clean and restart ICP
+
+# Testing
+npm run test:integration      # Frontend integration tests
+cd microservice && npm test  # Microservice test suite
+```
+
+### Development Tips
+- Use browser dev tools for WebSocket message debugging
+- Monitor microservice logs for API call patterns
+- Use DFX dashboard for ICP canister inspection
+- Test authentication flows with different user types
+
+## 🚀 Deployment
+
+### Frontend Deployment
+- Build optimized bundle with `npm run build`
+- Deploy to CDN or static hosting service
+- Configure environment variables for production
+
+### Microservice Deployment
+- Use containerization for consistent deployment
+- Set up environment variables in production
+- Configure rate limiting and security headers
+- Monitor API usage and performance
+
+### ICP Deployment
+
+#### Local Development
+1. Start local ICP network: `npm run icp:start`
+2. Deploy canister: `npm run icp:deploy`
+3. Copy the canister ID from the deployment output
+4. Update your `.env` file: `VITE_ICP_CANISTER_ID=<your_canister_id>`
+5. Restart your frontend development server
+
+#### Production Deployment
+1. Deploy to Internet Computer mainnet: `dfx deploy --network ic`
+2. Note the production canister ID from deployment output
+3. Update production environment variables with new canister ID
+4. Test identity integration with production canisters
+
+#### Getting Canister ID
+After running `dfx deploy`, you'll see output like:
+```
+Deployed canisters.
+URLs:
+  Backend canister via Candid interface:
+    icp_backend_backend: http://127.0.0.1:4943/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai&id=rrkah-fqaaa-aaaaa-aaaaq-cai
+```
+Use the second ID (`rrkah-fqaaa-aaaaa-aaaaq-cai` in this example) as your `VITE_ICP_CANISTER_ID`.
+
+## 📈 Performance Optimization
+
+### Frontend Optimizations
+- **Code Splitting**: Dynamic imports for route-based chunks
+- **WebSocket Pooling**: Efficient connection management
+- **Memoization**: React.memo and useMemo for expensive operations
+- **Asset Optimization**: Vite's built-in optimizations
+
+### Backend Optimizations
+- **Connection Pooling**: Efficient database and API connections
+- **Caching Strategies**: Redis or in-memory caching
+- **Rate Limiting**: Prevent API abuse and manage costs
+- **Load Balancing**: Scale microservice horizontally
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## License
-[Add your license information here]
+### Development Guidelines
+- Follow React best practices and hooks patterns
+- Use TypeScript for type safety where applicable
+- Write tests for new features and API endpoints
+- Maintain consistent code style with ESLint/Prettier
+- Document API changes and new environment variables
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support & Troubleshooting
+
+### Common Issues
+
+#### ICP Setup Issues
+- **"dfx not found"**: Install DFX using the command in Prerequisites section
+- **"Port 4943 already in use"**: Stop existing DFX with `dfx stop` before starting
+- **"Canister not found"**: Ensure you've deployed with `npm run icp:deploy` and updated `.env`
+- **"Network error"**: Check if local ICP network is running with `dfx ping`
+
+#### Frontend Issues
+- **WebSocket connection failed**: Verify microservice is running on port 3001
+- **Authentication errors**: Check if all auth providers are properly configured
+- **Missing environment variables**: Copy `.env.example` and fill in required values
+
+#### Microservice Issues
+- **Port conflicts**: Change PORT in microservice `.env` if 3001 is occupied
+- **API key errors**: Verify all required API keys are set in microservice `.env`
+- **CORS errors**: Ensure ALLOWED_ORIGIN matches your frontend URL
+
+For additional support:
+- Check the Issues tab for common problems
+- Review the development logs for error details
+- Ensure all environment variables are properly configured
+- Verify microservice and ICP backend are running correctly
+
+---
+
+**Note**: This is a development guide. Ensure all API keys and sensitive configuration are properly secured before deploying to production.

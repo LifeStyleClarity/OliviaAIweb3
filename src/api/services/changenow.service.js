@@ -1,11 +1,24 @@
-import axiosChangeNow from '../config/axios-changenow';
+import { OPENAI_MICROSERVICE_CONFIG } from '../config/endpoints.js';
 
 export const changeNowService = {
   // Get list of all available currencies
   async getCurrencies() {
     try {
-      const { data } = await axiosChangeNow.get('/currencies');
-      return { result: data };
+      const response = await fetch(`${OPENAI_MICROSERVICE_CONFIG.URL}/api/changenow/currencies?active=true`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_MICROSERVICE_CONFIG.TOKEN}`,
+          'Origin': window.location.origin
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return { result: data.success ? data.data : data };
     } catch (error) {
       console.error('ChangeNOW currencies fetch error:', error);
       throw error;
@@ -15,13 +28,21 @@ export const changeNowService = {
   // Get minimum exchange amount for a currency pair
   async getMinimalExchange(fromCurrency, toCurrency) {
     try {
-      const { data } = await axiosChangeNow.get('/min-amount', {
-        params: {
-          from: fromCurrency.toLowerCase(),
-          to: toCurrency.toLowerCase()
+      const response = await fetch(`${OPENAI_MICROSERVICE_CONFIG.URL}/api/changenow/min-amount?from=${fromCurrency.toLowerCase()}&to=${toCurrency.toLowerCase()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_MICROSERVICE_CONFIG.TOKEN}`,
+          'Origin': window.location.origin
         }
       });
-      return data;
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : data;
     } catch (error) {
       console.error('ChangeNOW minimal exchange error:', error);
       throw error;
@@ -31,14 +52,21 @@ export const changeNowService = {
   // Get exchange amount estimate
   async getExchangeAmount(fromCurrency, toCurrency, amount) {
     try {
-      const { data } = await axiosChangeNow.get('/exchange-amount', {
-        params: {
-          from: fromCurrency.toLowerCase(),
-          to: toCurrency.toLowerCase(),
-          amount: amount
+      const response = await fetch(`${OPENAI_MICROSERVICE_CONFIG.URL}/api/changenow/exchange-amount?from=${fromCurrency.toLowerCase()}&to=${toCurrency.toLowerCase()}&amount=${amount}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_MICROSERVICE_CONFIG.TOKEN}`,
+          'Origin': window.location.origin
         }
       });
-      return data;
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : data;
     } catch (error) {
       console.error('ChangeNOW exchange amount error:', error);
       throw error;
@@ -48,13 +76,21 @@ export const changeNowService = {
   // Get exchange range (min and max limits)  
   async getExchangeRange(fromCurrency, toCurrency) {
     try {
-      const { data } = await axiosChangeNow.get('/exchange-range', {
-        params: {
-          from: fromCurrency.toLowerCase(),
-          to: toCurrency.toLowerCase()
+      const response = await fetch(`${OPENAI_MICROSERVICE_CONFIG.URL}/api/changenow/exchange-rate?from=${fromCurrency.toLowerCase()}&to=${toCurrency.toLowerCase()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_MICROSERVICE_CONFIG.TOKEN}`,
+          'Origin': window.location.origin
         }
       });
-      return data;
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : data;
     } catch (error) {
       console.error('ChangeNOW exchange range error:', error);
       throw error;
@@ -65,15 +101,11 @@ export const changeNowService = {
   async getMarketInfo(fromCurrency, toCurrency) {
     try {
       // Use currencies endpoint to get basic info 
-      const { data } = await axiosChangeNow.get('/currencies', {
-        params: {
-          active: true
-        }
-      });
+      const currencies = await this.getCurrencies();
       
       // Find the currencies in the list
-      const fromCurrencyInfo = data.find(c => c.ticker.toLowerCase() === fromCurrency.toLowerCase());
-      const toCurrencyInfo = data.find(c => c.ticker.toLowerCase() === toCurrency.toLowerCase());
+      const fromCurrencyInfo = currencies.result.find(c => c.ticker.toLowerCase() === fromCurrency.toLowerCase());
+      const toCurrencyInfo = currencies.result.find(c => c.ticker.toLowerCase() === toCurrency.toLowerCase());
       
       return {
         fromCurrency: fromCurrencyInfo,
@@ -140,6 +172,55 @@ export const changeNowService = {
       };
     } catch (error) {
       console.error('ChangeNOW exchange info error:', error);
+      throw error;
+    }
+  },
+
+  // Create new exchange transaction
+  async createTransaction(transactionData) {
+    try {
+      const response = await fetch(`${OPENAI_MICROSERVICE_CONFIG.URL}/api/changenow/transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_MICROSERVICE_CONFIG.TOKEN}`,
+          'Origin': window.location.origin
+        },
+        body: JSON.stringify(transactionData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : data;
+    } catch (error) {
+      console.error('ChangeNOW createTransaction error:', error);
+      throw error;
+    }
+  },
+
+  // Get transaction status
+  async getTransactionStatus(transactionId) {
+    try {
+      const response = await fetch(`${OPENAI_MICROSERVICE_CONFIG.URL}/api/changenow/transactions/${transactionId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_MICROSERVICE_CONFIG.TOKEN}`,
+          'Origin': window.location.origin
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : data;
+    } catch (error) {
+      console.error('ChangeNOW getTransactionStatus error:', error);
       throw error;
     }
   }

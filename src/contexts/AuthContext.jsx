@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { log } from '../utils/logger.js';
 
 const AuthContext = createContext(null);
 
@@ -12,7 +13,7 @@ export function AuthProviderLogin({ children }) {
 
   // Log auth state changes for debugging
   useEffect(() => {
-    console.log('🔐 AuthContext state changed:', { 
+    log('🔐 AuthContext state changed:', { 
       userAuthenticated, 
       userData: userData?.user_id, 
       telegramUser, 

@@ -14,11 +14,15 @@ const axiosHgraph = axios.create({
 // Request interceptor
 axiosHgraph.interceptors.request.use(
   (config) => {
-    console.log('🟣 Hgraph API Request:', config.method?.toUpperCase(), config.url);
+    if (import.meta.env.VITE_NODE === 'development') {
+      console.log('🟣 Hgraph API Request:', config.method?.toUpperCase(), config.url);
+    }
     return config;
   },
   (error) => {
-    console.error('🔴 Hgraph Request Error:', error);
+    if (import.meta.env.VITE_NODE === 'development') {
+      console.error('🔴 Hgraph Request Error:', error);
+    }
     return Promise.reject(error);
   }
 );
@@ -26,15 +30,19 @@ axiosHgraph.interceptors.request.use(
 // Response interceptor
 axiosHgraph.interceptors.response.use(
   (response) => {
-    console.log('🟢 Hgraph API Response:', response.status, response.config.url);
+    if (import.meta.env.VITE_NODE === 'development') {
+      console.log('🟢 Hgraph API Response:', response.status, response.config.url);
+    }
     return response;
   },
   (error) => {
-    console.error('🔴 Hgraph API Error:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data
-    });
+    if (import.meta.env.VITE_NODE === 'development') {
+      console.error('🔴 Hgraph API Error:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+    }
     return Promise.reject(error);
   }
 );

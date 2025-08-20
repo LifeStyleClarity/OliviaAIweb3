@@ -295,9 +295,9 @@ const FloatingCoinStatsBubble = ({ isOpen, onClose, title = 'CoinStats', content
                   
                   {/* Central content area - spherical text flow */}
                   <div className="flex-1 flex items-center justify-center mt-24 mb-4 max-w-full overflow-hidden">
-                    <div className="text-center max-h-full overflow-auto px-4">
+                    <div className="text-center px-4">
                       {typeof content === 'string' ? (
-                        <div className="whitespace-pre-wrap font-medium text-sm text-white/90 leading-relaxed">
+                        <div className="whitespace-pre-wrap font-medium text-xs text-white/90 leading-relaxed">
                           {content}
                         </div>
                       ) : (

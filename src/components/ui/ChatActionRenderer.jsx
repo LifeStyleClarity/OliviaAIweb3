@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import TwitterUsername from "../AgentDataViews/TwitterUsername";
+
 import Button from "./Button";
 import InlineICPIdentityCreator from "./InlineICPIdentityCreator";
 
@@ -16,7 +16,11 @@ const ChatActionRenderer = ({
 
   switch (sub_action_type) {
     case "twitter_username":
-      return <TwitterUsername meta={meta} />;
+      return (
+        <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <span className="text-sm text-gray-600">Twitter: {meta?.username || 'N/A'}</span>
+        </div>
+      );
     
     // New action types for enhanced streaming system
     case "web_search_results":

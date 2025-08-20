@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import icpService from '../api/services/icp.service';
 import { privacyService } from '../api/services/privacy.service.js';
+import { log, error, warn } from '../utils/logger.js';
 import { aiService } from '../api/services/ai.service.js';
 import { ENDPOINTS, OPENAI_MICROSERVICE_CONFIG } from '../api/config/endpoints.js';
 
@@ -21,7 +22,7 @@ const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const CONNECTION_TIMEOUT = 60000; // 60 seconds
 
 export const WebSocketProvider = ({ children }) => {
-  console.log('🟦 WebSocketProvider mounting...');
+  log('🟦 WebSocketProvider mounting...');
   
   const wsRef = useRef(null);
   const messageHandlersRef = useRef(new Set());
@@ -64,10 +65,10 @@ export const WebSocketProvider = ({ children }) => {
         const now = Date.now();
         
         if (now < expirationTime) {
-          console.log('🟦 Loading existing conversation ID from localStorage:', storedId);
+          log('🟦 Loading existing conversation ID from localStorage:', storedId);
           return storedId;
         } else {
-          console.log('🟦 Stored conversation ID expired, generating new one');
+          log('🟦 Stored conversation ID expired, generating new one');
           // Clear expired data
           localStorage.removeItem(STORAGE_KEY);
           localStorage.removeItem(EXPIRATION_KEY);
@@ -85,28 +86,28 @@ export const WebSocketProvider = ({ children }) => {
       localStorage.setItem(STORAGE_KEY, newConversationId);
       localStorage.setItem(EXPIRATION_KEY, expirationTime.toString());
       
-      console.log('🟦 Generated new conversation ID:', newConversationId);
-      console.log('🟦 Conversation ID expires on:', new Date(expirationTime).toLocaleDateString());
+      log('🟦 Generated new conversation ID:', newConversationId);
+      log('🟦 Conversation ID expires on:', new Date(expirationTime).toLocaleDateString());
       
       return newConversationId;
     } catch (error) {
-      console.error('🟦 Error managing conversation ID localStorage:', error);
+      error('🟦 Error managing conversation ID localStorage:', error);
       // Fallback: generate temporary random ID without storage
       const fallbackId = generateConversationId();
-      console.log('🟦 Using fallback conversation ID:', fallbackId);
+      log('🟦 Using fallback conversation ID:', fallbackId);
       return fallbackId;
     }
   });
   
   // Debug ICP state changes
   useEffect(() => {
-    console.log('🟦 ICP State Changed:', { icpInitialized, hasIcpUser: !!icpUser, hasConversationId: !!conversationId });
+    log('🟦 ICP State Changed:', { icpInitialized, hasIcpUser: !!icpUser, hasConversationId: !!conversationId });
   }, [icpInitialized, icpUser, conversationId]);
   
   const { userData, userAuthenticated, isGuestUser } = useAuth();
 
   // Constants
-  const AGENT_ID = 'e66ea468-98a4-40a9-a9fd-803a39574e0e';
+  const AGENT_ID = import.meta.env.VITE_AGENT_ID || 'e66ea468-98a4-40a9-a9fd-803a39574e0e';
   const MODEL_NAME = 'gpt-4.1';
   
   // WebSocket endpoints - Secure-only mode using microservice proxy
@@ -114,13 +115,10 @@ export const WebSocketProvider = ({ children }) => {
     ENDPOINTS.WEBSOCKET.SECURE_PROXY, // Secure proxy endpoint (only option)
   ];
   
-  // Fallback endpoints for development/emergency use (commented out for production security)
-  const FALLBACK_ENDPOINTS = [
-    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app/ws/agent/stream',
-    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app/ws',
-    'wss://web2-agents-ai-micro-service-nodejs-8851907900.europe-west1.run.app',
-    'ws://localhost:8080/ws/agent/stream'
-  ];
+  // Fallback endpoints for development/emergency use (secured via environment variables)
+  const FALLBACK_ENDPOINTS = process.env.NODE_ENV === 'development' 
+    ? [import.meta.env.VITE_FALLBACK_WS_URL || 'ws://localhost:8080/ws/agent/stream']
+    : []; // No fallbacks in production - microservice only
   
   const [currentEndpointIndex, setCurrentEndpointIndex] = useState(0);
 
@@ -142,7 +140,7 @@ export const WebSocketProvider = ({ children }) => {
 
   // Start heartbeat/ping mechanism
   const startHeartbeat = useCallback(() => {
-    console.log('💓 Starting WebSocket heartbeat mechanism');
+    log('💓 Starting WebSocket heartbeat mechanism');
     
     clearInterval(heartbeatIntervalRef.current);
     lastPongRef.current = Date.now();
@@ -153,7 +151,7 @@ export const WebSocketProvider = ({ children }) => {
         
         // Check if we missed a pong (connection might be dead)
         if (lastPongRef.current && (now - lastPongRef.current) > (HEARTBEAT_INTERVAL * 2)) {
-          console.warn('💓 Heartbeat timeout detected, reconnecting...');
+          warn('💓 Heartbeat timeout detected, reconnecting...');
           wsRef.current.close(1000, 'Heartbeat timeout');
           return;
         }
@@ -161,9 +159,9 @@ export const WebSocketProvider = ({ children }) => {
         // Send ping
         try {
           wsRef.current.send(JSON.stringify({ type: 'ping', timestamp: now }));
-          console.log('💓 Ping sent');
+          log('💓 Ping sent');
         } catch (error) {
-          console.error('💓 Failed to send ping:', error);
+          error('💓 Failed to send ping:', error);
           wsRef.current.close(1000, 'Ping failed');
         }
       }
@@ -172,7 +170,7 @@ export const WebSocketProvider = ({ children }) => {
 
   // Stop heartbeat
   const stopHeartbeat = useCallback(() => {
-    console.log('💓 Stopping WebSocket heartbeat');
+    log('💓 Stopping WebSocket heartbeat');
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
@@ -211,12 +209,12 @@ export const WebSocketProvider = ({ children }) => {
       
       setConversationId(newConversationId);
       
-      console.log('🟦 Cleared old conversation ID and generated new one:', newConversationId);
-      console.log('🟦 New conversation ID expires on:', new Date(expirationTime).toLocaleDateString());
+      log('🟦 Cleared old conversation ID and generated new one:', newConversationId);
+      log('🟦 New conversation ID expires on:', new Date(expirationTime).toLocaleDateString());
       
       return newConversationId;
     } catch (error) {
-      console.error('🟦 Error clearing conversation ID:', error);
+      error('🟦 Error clearing conversation ID:', error);
       return null;
     }
   }, []);
@@ -224,18 +222,18 @@ export const WebSocketProvider = ({ children }) => {
   // Initialize ICP and create/get user
   const initializeICP = useCallback(async () => {
     if (icpInitialized) {
-      console.log('🟦 ICP already initialized');
+      log('🟦 ICP already initialized');
       return;
     }
     
     try {
-      console.log('🟦 Initializing ICP for user...', { userData, isGuestUser });
+      log('🟦 Initializing ICP for user...', { userData, isGuestUser });
       
       // Skip connection test in development - just proceed with user creation
-      console.log('🟦 Skipping ICP connection test in development - proceeding with user creation');
+      log('🟦 Skipping ICP connection test in development - proceeding with user creation');
       
       // Force create guest user immediately - skip all checks
-      console.log('🟦 FORCE: Creating guest user immediately');
+      log('🟦 FORCE: Creating guest user immediately');
       let user = await icpService.createGuestUser();
       
       if (user.success) {
@@ -245,23 +243,23 @@ export const WebSocketProvider = ({ children }) => {
         // Generate conversation ID for this session
         const newConversationId = generateConversationId();
         setConversationId(newConversationId);
-        console.log('🟦 Generated conversation ID:', newConversationId);
+        log('🟦 Generated conversation ID:', newConversationId);
         
-        console.log('🟦 ICP user initialized successfully:', user.user);
+        log('🟦 ICP user initialized successfully:', user.user);
       } else {
-        console.error('🟦 Failed to create guest user:', user.error);
+        error('🟦 Failed to create guest user:', user.error);
         
         // FALLBACK: Set minimal state to make it work
-        console.log('🟦 FALLBACK: Setting minimal ICP state');
+        log('🟦 FALLBACK: Setting minimal ICP state');
         setIcpUser({ id: 'fallback_user', isGuest: true });
         setIcpInitialized(true);
         setConversationId(generateConversationId());
       }
     } catch (error) {
-      console.error('🟦 ICP initialization error:', error);
+      error('🟦 ICP initialization error:', error);
       
       // FALLBACK: Set minimal state to make it work
-      console.log('🟦 ERROR FALLBACK: Setting minimal ICP state');
+      log('🟦 ERROR FALLBACK: Setting minimal ICP state');
       setIcpUser({ id: 'fallback_user', isGuest: true });
       setIcpInitialized(true);
       setConversationId(generateConversationId());
@@ -271,12 +269,12 @@ export const WebSocketProvider = ({ children }) => {
   // Retrieve conversation history from ICP
   const getConversationHistory = useCallback(async (limit = 10) => {
     if (!icpInitialized || !icpUser || !conversationId) {
-      console.log('🟦 ICP not ready for history retrieval');
+      log('🟦 ICP not ready for history retrieval');
       return [];
     }
     
     try {
-      console.log('🟦 Retrieving conversation history from ICP...');
+      log('🟦 Retrieving conversation history from ICP...');
       
       // Get messages for this conversation
       const result = await icpService.getConversationMessages(conversationId);
@@ -301,7 +299,7 @@ export const WebSocketProvider = ({ children }) => {
           });
         });
         
-        console.log('🟦 Retrieved conversation history:', {
+        log('🟦 Retrieved conversation history:', {
           totalMessages: result.messages.length,
           recentMessages: recentMessages.length,
           formattedHistory: formattedHistory.length
@@ -309,18 +307,18 @@ export const WebSocketProvider = ({ children }) => {
         
         return formattedHistory;
       } else {
-        console.log('🟦 No conversation history found or failed to retrieve');
+        log('🟦 No conversation history found or failed to retrieve');
         return [];
       }
     } catch (error) {
-      console.error('🟦 Error retrieving conversation history:', error);
+      error('🟦 Error retrieving conversation history:', error);
       return [];
     }
   }, [icpInitialized, icpUser, conversationId]);
 
   // Save message to ICP with privacy filtering
   const saveToICP = useCallback(async (userMessage, aiResponse, requestId) => {
-    console.log('🟦 saveToICP called with:', { 
+    log('🟦 saveToICP called with:', { 
       userMessage, 
       aiResponse, 
       requestId,
@@ -331,7 +329,7 @@ export const WebSocketProvider = ({ children }) => {
     });
     
     try {
-      console.log('🔒 Processing messages through privacy filter...');
+      log('🔒 Processing messages through privacy filter...');
       
       // 🔒 PRIVACY FILTER: ALWAYS analyze messages regardless of ICP status
       const privacyResult = await privacyService.processMessages(
@@ -346,19 +344,19 @@ export const WebSocketProvider = ({ children }) => {
       
       // Log privacy actions taken
       if (privacyResult.privacy?.userMessageHashed || privacyResult.privacy?.aiResponseHashed) {
-        console.log('🔒 Privacy protection applied:', {
+        log('🔒 Privacy protection applied:', {
           userMessageHashed: privacyResult.privacy.userMessageHashed,
           aiResponseHashed: privacyResult.privacy.aiResponseHashed,
           userReasons: privacyResult.privacy.userAnalysis?.reasons || [],
           aiReasons: privacyResult.privacy.aiAnalysis?.reasons || []
         });
       } else {
-        console.log('🔒 No sensitive content detected, messages stored as-is');
+        log('🔒 No sensitive content detected, messages stored as-is');
       }
       
       // Check if ICP is ready for storage
       if (!icpInitialized || !icpUser || !conversationId) {
-        console.log('🟦 ICP not ready, skipping storage (but privacy analysis completed)', {
+        log('🟦 ICP not ready, skipping storage (but privacy analysis completed)', {
           icpInitialized,
           hasIcpUser: !!icpUser,
           hasConversationId: !!conversationId,
@@ -367,7 +365,7 @@ export const WebSocketProvider = ({ children }) => {
         return;
       }
       
-      console.log('🟦 Saving processed message to ICP:', { 
+      log('🟦 Saving processed message to ICP:', { 
         originalUserLength: userMessage?.length || 0,
         finalUserLength: finalUserMessage?.length || 0,
         originalAiLength: aiResponse?.length || 0,
@@ -377,7 +375,7 @@ export const WebSocketProvider = ({ children }) => {
       
       // Validate messages before saving
       if (!finalUserMessage || !finalAiResponse) {
-        console.error('🟦 Cannot save to ICP: missing user or AI message', {
+        error('🟦 Cannot save to ICP: missing user or AI message', {
           hasUserMessage: !!finalUserMessage,
           hasAiResponse: !!finalAiResponse
         });
@@ -395,21 +393,21 @@ export const WebSocketProvider = ({ children }) => {
       );
       
       if (result.success) {
-        console.log('🟦 Message saved to ICP successfully:', result.message);
+        log('🟦 Message saved to ICP successfully:', result.message);
         
         // Remove from pending messages
         pendingMessagesRef.current.delete(requestId);
       } else {
-        console.error('🟦 Failed to save message to ICP:', result.error);
+        error('🟦 Failed to save message to ICP:', result.error);
       }
       
     } catch (error) {
-      console.error('🔒 Error in privacy processing or ICP save:', error);
+      error('🔒 Error in privacy processing or ICP save:', error);
       
       // Fallback: if ICP is ready but privacy processing failed, save original messages
       if (icpInitialized && icpUser && conversationId) {
         try {
-          console.log('🟦 Fallback: saving original messages due to privacy processing error');
+          log('🟦 Fallback: saving original messages due to privacy processing error');
           const messageId = `msg_${requestId}_${Date.now()}`;
           const result = await icpService.saveMessage(
             messageId,
@@ -424,7 +422,7 @@ export const WebSocketProvider = ({ children }) => {
             pendingMessagesRef.current.delete(requestId);
           }
         } catch (fallbackError) {
-          console.error('🟦 Fallback save also failed:', fallbackError);
+          error('🟦 Fallback save also failed:', fallbackError);
         }
       }
     }
@@ -453,7 +451,7 @@ export const WebSocketProvider = ({ children }) => {
       case 'pong':
         // Handle pong response from server
         lastPongRef.current = Date.now();
-        console.log('💓 Pong received, connection healthy');
+        log('💓 Pong received, connection healthy');
         break;
       case 'stream_chunk':
         setIsStreamingResponse(true);
@@ -461,7 +459,7 @@ export const WebSocketProvider = ({ children }) => {
       case 'stream_complete':
         setIsStreamingResponse(false);
         // Save completed message to ICP
-        console.log('🟦 Stream complete received:', { 
+        log('🟦 Stream complete received:', { 
           requestId: data.requestId, 
           hasData: !!data.data,
           pendingMessagesCount: pendingMessagesRef.current.size,
@@ -470,7 +468,7 @@ export const WebSocketProvider = ({ children }) => {
         
         if (data.requestId && data.data) {
           const pendingMessage = pendingMessagesRef.current.get(data.requestId);
-          console.log('🟦 Found pending message:', { 
+          log('🟦 Found pending message:', { 
             hasPendingMessage: !!pendingMessage,
             pendingMessage,
             requestId: data.requestId
@@ -479,17 +477,17 @@ export const WebSocketProvider = ({ children }) => {
           if (pendingMessage) {
             const aiResponse = data.data.fullResponse || data.data.text || '';
             const userMessage = pendingMessage.userMessage || pendingMessage.message;
-            console.log('🟦 Calling saveToICP with:', {
+            log('🟦 Calling saveToICP with:', {
               userMessage: userMessage,
               aiResponse: aiResponse.substring(0, 100) + '...',
               requestId: data.requestId
             });
             saveToICP(userMessage, aiResponse, data.requestId);
           } else {
-            console.log('🟦 No pending message found for requestId:', data.requestId);
+            log('🟦 No pending message found for requestId:', data.requestId);
           }
         } else {
-          console.log('🟦 Missing requestId or data in stream_complete:', { 
+          log('🟦 Missing requestId or data in stream_complete:', { 
             hasRequestId: !!data.requestId,
             hasData: !!data.data
           });
@@ -512,20 +510,20 @@ export const WebSocketProvider = ({ children }) => {
         }
         break;
       case 'connection':
-        console.log('✅ WebSocket connection established:', data.message);
+        log('✅ WebSocket connection established:', data.message);
         // Connection is ready - ICP initialization disabled (manual only)
-        console.log('🟦 WebSocket connected, ICP auto-initialization disabled');
+        log('🟦 WebSocket connected, ICP auto-initialization disabled');
         break;
       case 'text':
-        console.log('📝 Received text message:', data);
+        log('📝 Received text message:', data);
         // Text messages are handled by the ChatModal component through subscription
         break;
       case 'response':
-        console.log('📝 Received response message:', data);
+        log('📝 Received response message:', data);
         // Response messages are handled by the ChatModal component through subscription
         break;
       default:
-        console.log('Unknown message type:', data.type, 'Data:', data);
+        log('Unknown message type:', data.type, 'Data:', data);
     }
     
     // Notify all subscribed handlers
@@ -533,20 +531,20 @@ export const WebSocketProvider = ({ children }) => {
       try {
         handler(data);
       } catch (error) {
-        console.error('Error in message handler:', error);
+        error('Error in message handler:', error);
       }
     });
   }, [initializeICP, saveToICP]);
 
   const connectWebSocket = useCallback(() => {
     if (isConnecting || wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log('⚠️ WebSocket already connecting or connected, skipping...');
+      log('⚠️ WebSocket already connecting or connected, skipping...');
       return;
     }
 
     // Only skip if component is unmounted
     if (!isMounted) {
-      console.log('⚠️ Component unmounted, skipping connection attempt');
+      log('⚠️ Component unmounted, skipping connection attempt');
       return;
     }
 
@@ -563,12 +561,12 @@ export const WebSocketProvider = ({ children }) => {
     setWsError(null);
 
     const wsUrl = WS_ENDPOINTS[currentEndpointIndex];
-    console.log('🔌 Connecting to Olivia AI WebSocket:', wsUrl, '(attempt:', connectionAttempts + 1, ')');
+    log('🔌 Connecting to Olivia AI WebSocket:', wsUrl, '(attempt:', connectionAttempts + 1, ')');
     
     // Set connection timeout
     connectionTimeoutRef.current = setTimeout(() => {
       if (wsRef.current && wsRef.current.readyState !== WebSocket.OPEN) {
-        console.warn('🔌 Connection timeout, closing WebSocket');
+        warn('🔌 Connection timeout, closing WebSocket');
         wsRef.current.close();
       }
     }, CONNECTION_TIMEOUT);
@@ -578,18 +576,18 @@ export const WebSocketProvider = ({ children }) => {
       if (OPENAI_MICROSERVICE_CONFIG.TOKEN) {
         // Add token as query parameter for secure proxy authentication
         const authenticatedUrl = `${wsUrl}?token=${encodeURIComponent(OPENAI_MICROSERVICE_CONFIG.TOKEN)}`;
-        console.log('🔐 Using secure proxy with authentication');
+        log('🔐 Using secure proxy with authentication');
         wsRef.current = new WebSocket(authenticatedUrl);
       } else {
         // No token available for secure proxy
-        console.error('🚨 No authentication token available for secure proxy');
+        error('🚨 No authentication token available for secure proxy');
         setWsError(new Error('Authentication token required for secure proxy'));
         setIsConnecting(false);
         return;
       }
     } else {
       // This should not happen in secure-only mode, but handle gracefully
-      console.warn('⚠️ Attempting to connect to non-secure endpoint in secure-only mode');
+      warn('⚠️ Attempting to connect to non-secure endpoint in secure-only mode');
       wsRef.current = new WebSocket(wsUrl);
     }
 
@@ -607,7 +605,7 @@ export const WebSocketProvider = ({ children }) => {
         setConnectionAttempts(0);
         setWsError(null);
         setIsServerUnavailable(false);
-        console.log('✅ WebSocket connected successfully - starting heartbeat');
+        log('✅ WebSocket connected successfully - starting heartbeat');
         
         // Start heartbeat mechanism
         startHeartbeat();
@@ -617,10 +615,10 @@ export const WebSocketProvider = ({ children }) => {
     wsRef.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('📨 Received WebSocket message:', data);
+        log('📨 Received WebSocket message:', data);
         handleWebSocketMessage(data);
       } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
+        error('Error parsing WebSocket message:', error);
       }
     };
 
@@ -629,14 +627,14 @@ export const WebSocketProvider = ({ children }) => {
       setIsConnecting(false);
       stopHeartbeat(); // Stop heartbeat when connection closes
       
-      console.log('🔌 WebSocket connection closed. Code:', event.code, 'Reason:', event.reason);
+      log('🔌 WebSocket connection closed. Code:', event.code, 'Reason:', event.reason);
       
       // Persistent reconnection while component is mounted
       if (isMounted && shouldReconnect && event.code !== 1000) {
         // Calculate delay with exponential backoff (max 30 seconds)
         const delay = Math.min(Math.pow(2, connectionAttempts) * 1000, 30000);
         
-        console.log(`🔄 Reconnecting in ${delay/1000}s... (attempt ${connectionAttempts + 1})`);
+        log(`🔄 Reconnecting in ${delay/1000}s... (attempt ${connectionAttempts + 1})`);
         
         reconnectTimeoutRef.current = setTimeout(() => {
           if (isMounted) {
@@ -645,16 +643,16 @@ export const WebSocketProvider = ({ children }) => {
           }
         }, delay);
       } else if (!shouldReconnect) {
-        console.log('🔌 Reconnection disabled, not attempting to reconnect');
+        log('🔌 Reconnection disabled, not attempting to reconnect');
       } else if (!isMounted) {
-        console.log('🔌 Component unmounted, not attempting to reconnect');
+        log('🔌 Component unmounted, not attempting to reconnect');
       } else if (event.code === 1000) {
-        console.log('🔌 Clean close, not attempting to reconnect');
+        log('🔌 Clean close, not attempting to reconnect');
       }
     };
 
     wsRef.current.onerror = (error) => {
-      console.error('🚨 Secure WebSocket Proxy Error:', {
+      error('🚨 Secure WebSocket Proxy Error:', {
         url: wsUrl,
         error: error,
         readyState: wsRef.current?.readyState,
@@ -668,15 +666,15 @@ export const WebSocketProvider = ({ children }) => {
       
       // In secure-only mode, we only have one endpoint
       if (wsUrl === ENDPOINTS.WEBSOCKET.SECURE_PROXY) {
-        console.error('🚨 Secure proxy connection failed. Please check:');
-        console.error('   - Microservice is running on port 3001');
-        console.error('   - Authentication token is configured');
-        console.error('   - CORS settings allow your origin');
+        error('🚨 Secure proxy connection failed. Please check:');
+        error('   - Microservice is running on port 3001');
+        error('   - Authentication token is configured');
+        error('   - CORS settings allow your origin');
         
         // Retry the same endpoint after delay if should reconnect
         if (isMounted && shouldReconnect) {
           const retryDelay = Math.min(Math.pow(2, connectionAttempts) * 1000, 30000);
-          console.log(`🔄 Retrying secure proxy connection in ${retryDelay/1000}s...`);
+          log(`🔄 Retrying secure proxy connection in ${retryDelay/1000}s...`);
           
           reconnectTimeoutRef.current = setTimeout(() => {
             if (isMounted && shouldReconnect) {
@@ -688,7 +686,7 @@ export const WebSocketProvider = ({ children }) => {
       } else {
         // Fallback endpoints handling (for development mode)
         if (currentEndpointIndex < WS_ENDPOINTS.length - 1 && isMounted) {
-          console.log(`🔌 Trying next WebSocket endpoint... (${currentEndpointIndex + 1}/${WS_ENDPOINTS.length - 1})`);
+          log(`🔌 Trying next WebSocket endpoint... (${currentEndpointIndex + 1}/${WS_ENDPOINTS.length - 1})`);
           setCurrentEndpointIndex(prev => prev + 1);
           
           setTimeout(() => {
@@ -698,14 +696,14 @@ export const WebSocketProvider = ({ children }) => {
           }, 1000);
         } else {
           setCurrentEndpointIndex(0);
-          console.error('🚨 All WebSocket endpoints failed. Service may be down.');
+          error('🚨 All WebSocket endpoints failed. Service may be down.');
         }
       }
     };
   }, [isConnecting, connectionAttempts, shouldReconnect, isServerUnavailable, currentEndpointIndex, handleWebSocketMessage]);
 
   const disconnectWebSocket = useCallback(() => {
-    console.log('🔌 Manually disconnecting WebSocket...');
+    log('🔌 Manually disconnecting WebSocket...');
     setShouldReconnect(false); // Disable reconnection when manually disconnecting
     
     // Clear all timers and stop heartbeat
@@ -722,12 +720,12 @@ export const WebSocketProvider = ({ children }) => {
     setConnectionAttempts(0);
     setCurrentEndpointIndex(0); // Reset to first endpoint
     setIsServerUnavailable(false); // Reset server availability when manually disconnecting
-    console.log('✅ WebSocket disconnected cleanly');
+    log('✅ WebSocket disconnected cleanly');
   }, [clearAllTimers, stopHeartbeat]);
 
   // Cancel current streaming response
   const cancelStreamingResponse = useCallback(() => {
-    console.log('🚫 Canceling streaming response');
+    log('🚫 Canceling streaming response');
     
     // Clear streaming state
     setIsStreamingResponse(false);
@@ -750,7 +748,7 @@ export const WebSocketProvider = ({ children }) => {
       try {
         wsRef.current.send(JSON.stringify(cancelMessage));
       } catch (error) {
-        console.error('Error sending cancel message:', error);
+        error('Error sending cancel message:', error);
       }
     }
   }, []);
@@ -762,13 +760,13 @@ export const WebSocketProvider = ({ children }) => {
       // Wait for WebSocket to be connected
       await waitForConnection();
     } catch (error) {
-      console.error('❌ Failed to establish WebSocket connection:', error);
+      error('❌ Failed to establish WebSocket connection:', error);
       return false;
     }
 
     // Double-check connection after waiting
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.log('❌ WebSocket still not connected after waiting');
+      log('❌ WebSocket still not connected after waiting');
       return false;
     }
 
@@ -782,7 +780,7 @@ export const WebSocketProvider = ({ children }) => {
     let historyToSend = conversationHistory;
     if (historyToSend.length === 0) {
       historyToSend = await getConversationHistory(10); // Get last 10 message pairs
-      console.log('🟦 Retrieved conversation history for AI context:', {
+      log('🟦 Retrieved conversation history for AI context:', {
         historyLength: historyToSend.length,
         hasHistory: historyToSend.length > 0
       });
@@ -806,7 +804,7 @@ export const WebSocketProvider = ({ children }) => {
     };
 
     try {
-      console.log('📡 Sending WebSocket message with history:', {
+      log('📡 Sending WebSocket message with history:', {
         ...messageData,
         data: {
           ...messageData.data,
@@ -828,18 +826,18 @@ export const WebSocketProvider = ({ children }) => {
         imageEnabled
       });
       
-      console.log('🟦 Added message to pending:', { 
+      log('🟦 Added message to pending:', { 
         requestId,
         message: message.substring(0, 50) + '...',
         pendingCount: pendingMessagesRef.current.size
       });
       
-      console.log('✅ Message sent successfully with requestId:', requestId);
+      log('✅ Message sent successfully with requestId:', requestId);
       
       // Return the requestId so upgrade tracking can be done by the caller
       return requestId;
     } catch (error) {
-      console.error('Error sending message:', error);
+      error('Error sending message:', error);
       return false;
     }
   }, [extractUserOptions, getConversationHistory]);
@@ -863,7 +861,7 @@ export const WebSocketProvider = ({ children }) => {
 
   // Manual connect function that can be called when needed
   const connect = useCallback(() => {
-    console.log('🔌 Manual connection requested');
+    log('🔌 Manual connection requested');
     // Reset connection attempts, endpoint index, and server unavailable flag when manually connecting
     setConnectionAttempts(0);
     setCurrentEndpointIndex(0); // Start from first endpoint
@@ -883,16 +881,16 @@ export const WebSocketProvider = ({ children }) => {
     return new Promise((resolve, reject) => {
       // If already connected, resolve immediately
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        console.log('✅ WebSocket already connected');
+        log('✅ WebSocket already connected');
         resolve(true);
         return;
       }
 
-      console.log('🔄 WebSocket not connected, attempting to connect...');
+      log('🔄 WebSocket not connected, attempting to connect...');
       
       // Set up timeout for connection attempt
       const connectionTimeout = setTimeout(() => {
-        console.log('⏱️ WebSocket connection timeout (30s)');
+        log('⏱️ WebSocket connection timeout (30s)');
         reject(new Error('Connection timeout - unable to connect to AI service'));
       }, 30000); // 30 second timeout
 
@@ -900,7 +898,7 @@ export const WebSocketProvider = ({ children }) => {
       const checkConnection = () => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           clearTimeout(connectionTimeout);
-          console.log('✅ WebSocket connection established');
+          log('✅ WebSocket connection established');
           resolve(true);
         } else if (wsRef.current?.readyState === WebSocket.CLOSED || wsRef.current?.readyState === WebSocket.CLOSING) {
           // Connection failed, wait a bit and check again
@@ -923,7 +921,7 @@ export const WebSocketProvider = ({ children }) => {
 
   // Auto-initialize ICP when context is ready
   useEffect(() => {
-    console.log('🟦 ICP Auto-init useEffect running:', { 
+    log('🟦 ICP Auto-init useEffect running:', { 
       userData: !!userData, 
       isGuestUser, 
       icpInitialized,
@@ -932,11 +930,11 @@ export const WebSocketProvider = ({ children }) => {
     
     // Force initialization for ANY user state
     if (!icpInitialized) {
-      console.log('🟦 FORCING ICP initialization - user will be created as guest');
+      log('🟦 FORCING ICP initialization - user will be created as guest');
       try {
         initializeICP();
       } catch (error) {
-        console.error('🟦 Error calling initializeICP:', error);
+        error('🟦 Error calling initializeICP:', error);
       }
     }
   }, [userData, isGuestUser, icpInitialized, initializeICP]);
@@ -945,11 +943,11 @@ export const WebSocketProvider = ({ children }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!icpInitialized) {
-        console.log('🟦 BACKUP: Force ICP init after 2 seconds');
+        log('🟦 BACKUP: Force ICP init after 2 seconds');
         try {
           initializeICP();
         } catch (error) {
-          console.error('🟦 BACKUP init error:', error);
+          error('🟦 BACKUP init error:', error);
         }
       }
     }, 2000);
@@ -963,7 +961,7 @@ export const WebSocketProvider = ({ children }) => {
     setShouldReconnect(true);
     
     // Auto-connect when component mounts
-    console.log('🔌 Auto-connecting on mount...');
+    log('🔌 Auto-connecting on mount...');
     const timeoutId = setTimeout(() => {
       if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
         connectWebSocket();
@@ -971,7 +969,7 @@ export const WebSocketProvider = ({ children }) => {
     }, 100); // Small delay to ensure state is set
     
     return () => {
-      console.log('🔌 Component unmounting, cleaning up WebSocket...');
+      log('🔌 Component unmounting, cleaning up WebSocket...');
       clearTimeout(timeoutId);
       setIsMounted(false);
       setShouldReconnect(false); // Disable reconnection on unmount
@@ -990,7 +988,7 @@ export const WebSocketProvider = ({ children }) => {
   // Expose initializeICP globally for debugging
   useEffect(() => {
     window.forceICPInit = () => {
-      console.log('🟦 MANUAL: Force ICP initialization from console');
+      log('🟦 MANUAL: Force ICP initialization from console');
       initializeICP();
     };
     

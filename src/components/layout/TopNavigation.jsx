@@ -2,12 +2,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { TonConnectButton, useTonWallet, useTonConnectUI } from '@tonconnect/ui-react';
 import { useInternetIdentity } from '../../contexts/InternetIdentityContext';
-import NotificationButton from '../ui/NotificationButton';
+
 import { useAuth } from '../../contexts/AuthContext';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import { useWalletAuthFlow } from '../../hooks/useWalletAuthFlow';
-import { WalletAuthModal } from '../WalletAuthModal';
+
 import Button from '../ui/Button';
+import { log } from '../../utils/logger.js';
 import { useNavigate } from 'react-router-dom';
 import { useAccountUpgrade } from '../../hooks/useAccountUpgrade';
 import icpLogo from '../../assets/icp-logo.jpg';
@@ -43,18 +44,18 @@ export default function TopNavigation() {
   useEffect(() => {
     // If no authentication method is active, set userAuthenticated to false
     if (!wallet && !telegramUser && !internetIdentityAuth) {
-      console.log('🔐 TopNav: No auth method detected, setting userAuthenticated=false');
+      log('🔐 TopNav: No auth method detected, setting userAuthenticated=false');
       setUserAuthenticated(false);
     } else if (wallet) {
-      console.log('🔐 TopNav: TON wallet detected, setting userAuthenticated=true');
+      log('🔐 TopNav: TON wallet detected, setting userAuthenticated=true');
       setTelegramUser(false);
       setUserAuthenticated(true);
     } else if (telegramUser) {
-      console.log('🔐 TopNav: Telegram user detected, setting userAuthenticated=true');
+      log('🔐 TopNav: Telegram user detected, setting userAuthenticated=true');
       setTelegramUser(true);
       setUserAuthenticated(true);
     } else if (internetIdentityAuth) {
-      console.log('🔐 TopNav: Internet Identity auth detected, setting userAuthenticated=true');
+      log('🔐 TopNav: Internet Identity auth detected, setting userAuthenticated=true');
       setTelegramUser(false);
       setUserAuthenticated(true);
     }
@@ -62,18 +63,18 @@ export default function TopNavigation() {
 
   // Handle comprehensive logout for all authentication types
   const handleLogout = async () => {
-    console.log('🔐 Logging out user...');
+    log('🔐 Logging out user...');
     
     try {
       // Disconnect from TON wallet if connected
       if (wallet && tonConnectUI) {
-        console.log('🔐 Disconnecting from TON wallet');
+        log('🔐 Disconnecting from TON wallet');
         await tonConnectUI.disconnect();
       }
       
       // Logout from Internet Identity if authenticated
       if (internetIdentityAuth && logoutInternetIdentity) {
-        console.log('🔐 Logging out from Internet Identity');
+        log('🔐 Logging out from Internet Identity');
         await logoutInternetIdentity();
       }
       
@@ -83,7 +84,7 @@ export default function TopNavigation() {
       // Navigate to login page
       navigate('/login');
       
-      console.log('🔐 Logout completed successfully');
+      log('🔐 Logout completed successfully');
     } catch (error) {
       console.error('❌ Error during logout:', error);
       // Still navigate to login page even if there's an error
@@ -94,9 +95,10 @@ export default function TopNavigation() {
   // Keep the old function name for backwards compatibility
   const handleGuestLogout = handleLogout;
 
-  // Handle ICP ID creation - navigate to dedicated setup page
+  // ICP ID creation - handled inline now (setup page removed)
   const handleCreateICPID = () => {
-    navigate('/icp-setup');
+    // ICP setup functionality moved inline - no separate page needed
+    log('ICP ID creation requested - handled inline');
   };
 
   // Helper function to format Principal ID for display
@@ -135,7 +137,7 @@ export default function TopNavigation() {
   // Debug logging for ICP state changes
   useEffect(() => {
     if (import.meta.env.DEV) {
-      console.log('🔑 TopNav ICP State:', {
+      log('🔑 TopNav ICP State:', {
         isGuestUser,
         icpInitialized,
         hasICPUser: !!icpUser,
@@ -148,15 +150,7 @@ export default function TopNavigation() {
 
   return (
     <>
-      {/* Render the shared Wallet Authentication Modal if needed */}
-      <WalletAuthModal
-        isOpen={isModalOpen}
-        modalUsers={modalUsers}
-        modalMessages={modalMessages}
-        handleAggregateAccounts={handleAggregateAccounts}
-        handleCancelAggregate={handleCancelAggregate}
-        wallet={wallet}
-      />
+      {/* Wallet authentication modal functionality removed */}
 
       <div className="px-4 py-4" style={{ zIndex: 2147483646 }}>
         <div className="flex justify-between items-center">
@@ -376,12 +370,7 @@ export default function TopNavigation() {
               <TonConnectButton className="!text-base bg-transparent" />
             )}
             
-            {/* Notifications */}
-            {!isGuestUser && (
-              <div className="ml-4">
-                <NotificationButton />
-          </div>
-            )}
+
           </div>
         </div>
       </div>

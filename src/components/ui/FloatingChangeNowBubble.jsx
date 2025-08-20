@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import changeNowLogo from './change now .png';
+import { log, error as logError } from '../../utils/logger.js';
 
 // OpenAI Trading Parameter Extraction Service
 const extractTradingParameters = async (input) => {
@@ -22,7 +23,7 @@ const extractTradingParameters = async (input) => {
     const data = await response.json();
     return data.success ? data.data.extracted_parameters : null;
   } catch (error) {
-    console.error('🚨 Failed to extract trading parameters:', error);
+    logError('🚨 Failed to extract trading parameters:', error);
     return null;
   }
 };
@@ -306,9 +307,9 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                   
                   {/* Central content area - spherical text flow */}
                   <div className="flex-1 flex items-center justify-center mt-24 mb-4 max-w-full overflow-hidden">
-                    <div className="text-center max-h-full overflow-auto px-4">
+                    <div className="text-center px-4">
                       {typeof content === 'string' ? (
-                        <ReactMarkdown className="whitespace-pre-wrap font-medium text-sm text-white/90 leading-relaxed prose prose-invert max-w-none">
+                        <ReactMarkdown className="whitespace-pre-wrap font-medium text-xs text-white/90 leading-relaxed prose prose-invert max-w-none">
                           {content}
                         </ReactMarkdown>
                       ) : (
@@ -325,10 +326,10 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                         onClick={async (e) => {
                           e.stopPropagation();
                           e.preventDefault();
-                          console.log('🔄 Exchange Now button clicked!');
-                          console.log('📋 Content:', content);
-                          console.log('🏷️ Title:', title);
-                          console.log('📝 Original Query:', originalQuery);
+                          log('🔄 Exchange Now button clicked!');
+                          log('📋 Content:', content);
+                          log('🏷️ Title:', title);
+                          log('📝 Original Query:', originalQuery);
                           
                           // Enhanced URL building using OpenAI trading parameter extraction
                           let url = 'https://changenow.io';
@@ -336,11 +337,11 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                           try {
                             // Extract the original user query - prioritize originalQuery prop
                             let userQuery = originalQuery;
-                            console.log('🔍 Initial userQuery from originalQuery prop:', userQuery);
+                            log('🔍 Initial userQuery from originalQuery prop:', userQuery);
                             
                             // If no originalQuery provided, try to extract from content
                             if (!userQuery) {
-                              console.log('⚠️ No originalQuery prop, extracting from content...');
+                              log('⚠️ No originalQuery prop, extracting from content...');
                               // Try to extract from content first (look for patterns like "Buy", "Swap", etc.)
                               const buyMatch = content.match(/Buy[:\s]+([^.]*)/i);
                               const swapMatch = content.match(/Swap[:\s]+([^.]*)/i);
@@ -366,21 +367,21 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                               }
                             }
                             
-                            console.log('🎯 Final userQuery for OpenAI:', userQuery);
+                            log('🎯 Final userQuery for OpenAI:', userQuery);
                             
                             if (!userQuery) {
-                              console.error('❌ No userQuery available for OpenAI extraction!');
+                              logError('❌ No userQuery available for OpenAI extraction!');
                               return;
                             }
                             
-                            console.log('🤖 Extracting parameters from:', userQuery);
+                            log('🤖 Extracting parameters from:', userQuery);
                             
                             // Use OpenAI to extract trading parameters
                             const params = await extractTradingParameters(userQuery);
                             
                             if (params && params.from_currency && params.to_currency) {
-                              console.log('✅ Extracted parameters:', params);
-                              console.log('🔢 Raw amount from API:', params.amount, typeof params.amount);
+                              log('✅ Extracted parameters:', params);
+                              log('🔢 Raw amount from API:', params.amount, typeof params.amount);
                               
                               // Enhanced token mapping for ChangeNOW compatibility
                               const tokenMappings = {
@@ -444,12 +445,12 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                                 amount = 1; // Default amount
                               }
                               
-                              console.log('💰 Final calculated amount:', amount, '(from params.amount:', params.amount, ')');
+                              log('💰 Final calculated amount:', amount, '(from params.amount:', params.amount, ')');
                               
                               // Build the ChangeNOW URL with extracted parameters
                               url = `https://changenow.io/exchange?from=${fromToken}&to=${toToken}&amount=${amount}`;
                               
-                              console.log('🎯 Built URL with AI parameters:', {
+                              log('🎯 Built URL with AI parameters:', {
                                 from: fromToken,
                                 to: toToken,
                                 amount: amount,
@@ -457,7 +458,7 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                                 url: url
                               });
                             } else {
-                              console.log('⚠️ AI extraction failed, using fallback logic');
+                              log('⚠️ AI extraction failed, using fallback logic');
                               
                               // Fallback to original regex-based approach
                           const swapMatch = content.match(/Swap: (\w+) → (\w+)/);
@@ -483,16 +484,16 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                               }
                             }
                           } catch (error) {
-                            console.error('🚨 Error in AI parameter extraction:', error);
+                            logError('🚨 Error in AI parameter extraction:', error);
                             
                             // Fallback: Still try OpenAI extraction if the main try block failed
                             try {
-                              console.log('🔄 Attempting OpenAI extraction in fallback...');
+                              log('🔄 Attempting OpenAI extraction in fallback...');
                               if (userQuery) {
                                 const fallbackParams = await extractTradingParameters(userQuery);
                                 
                                 if (fallbackParams && fallbackParams.from_currency && fallbackParams.to_currency) {
-                                  console.log('✅ Fallback OpenAI extraction succeeded:', fallbackParams);
+                                  log('✅ Fallback OpenAI extraction succeeded:', fallbackParams);
                                   
                                   // Use basic token mappings for fallback
                                   const basicMappings = {
@@ -505,7 +506,7 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                                   const amount = Math.max(1, Number(fallbackParams.amount) || 1);
                                   
                                   url = `https://changenow.io/exchange?from=${fromToken}&to=${toToken}&amount=${amount}`;
-                                  console.log('🎯 Fallback OpenAI URL built:', url);
+                                  log('🎯 Fallback OpenAI URL built:', url);
                                 } else {
                                   throw new Error('Fallback OpenAI extraction failed');
                                 }
@@ -513,7 +514,7 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                                 throw new Error('No user query for fallback');
                               }
                             } catch (fallbackError) {
-                              console.error('🚨 Fallback OpenAI extraction also failed:', fallbackError);
+                              logError('🚨 Fallback OpenAI extraction also failed:', fallbackError);
                               
                               // Ultimate fallback - use basic pattern matching only as last resort
                               const swapMatch = content.match(/Swap: (\w+) → (\w+)/);
@@ -521,12 +522,12 @@ const FloatingChangeNowBubble = ({ isOpen, onClose, title = 'ChangeNOW', content
                                 const fromToken = swapMatch[1].toLowerCase();
                                 const toToken = swapMatch[2].toLowerCase();
                                 url = `https://changenow.io/exchange?from=${fromToken}&to=${toToken}&amount=1`;
-                                console.log('🔧 Ultimate regex fallback URL:', url);
+                                log('🔧 Ultimate regex fallback URL:', url);
                               }
                             }
                           }
                           
-                          console.log('🌐 Opening ChangeNOW with URL:', url);
+                          log('🌐 Opening ChangeNOW with URL:', url);
                           
                           // Always open in new browser tab (not in-app browser)
                           window.open(url, '_blank', 'noopener,noreferrer');

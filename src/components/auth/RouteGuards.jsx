@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useInternetIdentity } from '../../contexts/InternetIdentityContext';
+import { log } from '../../utils/logger.js';
 
 export const PrivateRoute = () => {
   const { userAuthenticated, telegramUser, isGuestUser } = useAuth();
@@ -25,14 +26,14 @@ export const PrivateRoute = () => {
     pathname: location.pathname 
   }), [userAuthenticated, telegramUser, isGuestUser, internetIdentityAuth, principal, location.pathname]);
 
-  console.log('🔒 PrivateRoute state:', debugInfo);
+  log('🔒 PrivateRoute state:', debugInfo);
 
   if (!hasAccess) {
-    console.log('🔒 PrivateRoute: BLOCKING ACCESS - All auth states are false');
+    log('🔒 PrivateRoute: BLOCKING ACCESS - All auth states are false');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  console.log('🔒 PrivateRoute: ALLOWING ACCESS - Auth method found');
+  log('🔒 PrivateRoute: ALLOWING ACCESS - Auth method found');
   return <Outlet />;
 };
 
@@ -54,14 +55,14 @@ export const PublicRoute = ({ children }) => {
     principal: principal ? `${principal.slice(0,10)}...` : null
   }), [userAuthenticated, telegramUser, isGuestUser, internetIdentityAuth, principal]);
 
-  console.log('🔄 PublicRoute state:', debugInfo);
+  log('🔄 PublicRoute state:', debugInfo);
   
   if (isAuthenticated) {
-    console.log('🔄 PublicRoute: User authenticated, redirecting to home');
+    log('🔄 PublicRoute: User authenticated, redirecting to home');
     return <Navigate to="/home" replace />;
   }
 
-  console.log('🔄 PublicRoute: Showing login page');
+  log('🔄 PublicRoute: Showing login page');
   return children;
 };
 

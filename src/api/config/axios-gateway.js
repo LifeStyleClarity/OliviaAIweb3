@@ -9,7 +9,9 @@ const axiosInstanceAPIGateway = axios.create({
 });
 
 export const logError = (error) => {
-  console.error(error);
+  if (import.meta.env.VITE_NODE === 'development') {
+    console.error(error);
+  }
 };
 
 

@@ -5,6 +5,7 @@ import { useInternetIdentity } from '../contexts/InternetIdentityContext'
 import { useAccountUpgrade } from '../hooks/useAccountUpgrade';
 import { icpService } from '../api/services/icp.service.js';
 import { lurkyService, coingeckoService, coinstatsService, hgraphService, changeNowService } from '../api';
+import { log, error as logError } from '../utils/logger.js';
 import FloatingLurkyBubble from '../components/ui/FloatingLurkyBubble.jsx';
 import FloatingCoinGeckoBubble from '../components/ui/FloatingCoinGeckoBubble.jsx';
 import FloatingCoinStatsBubble from '../components/ui/FloatingCoinStatsBubble.jsx';
@@ -45,7 +46,7 @@ export default function Home() {
 
   // Debug browser state changes
   useEffect(() => {
-    console.log('🔗 Browser state changed:', { browserOpen, browserUrl })
+    log('🔗 Browser state changed:', { browserOpen, browserUrl })
   }, [browserOpen, browserUrl])
 
   // Handle opening URLs in in-app browser
@@ -53,8 +54,8 @@ export default function Home() {
     // Unescape any HTML entities that might have been escaped for onclick
     let cleanUrl = url.replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&quot;/g, '"')
     
-    console.log('🔗 URL click triggered with:', url)
-    console.log('🔗 Cleaned URL:', cleanUrl)
+    log('🔗 URL click triggered with:', url)
+    log('🔗 Cleaned URL:', cleanUrl)
     
     // Fix common CoinGecko URL issues
     if (cleanUrl.includes('coingecko.com')) {
@@ -67,8 +68,8 @@ export default function Home() {
       }
     }
     
-    console.log('🔗 Final URL for browser:', cleanUrl)
-    console.log('🔗 Setting browserOpen to true')
+    log('🔗 Final URL for browser:', cleanUrl)
+    log('🔗 Setting browserOpen to true')
     setBrowserUrl(cleanUrl)
     setBrowserOpen(true)
   }, [])
@@ -95,7 +96,7 @@ export default function Home() {
         event.preventDefault();
         const href = event.target.getAttribute('data-url');
         if (href && handleUrlClick) {
-          console.log('🔗 Link clicked via event delegation:', href);
+          log('🔗 Link clicked via event delegation:', href);
           handleUrlClick(href);
         }
       }
@@ -279,7 +280,7 @@ export default function Home() {
 
   // Parse AI responses for coin mentions and show bubbles - DYNAMIC EXTRACTION
   const parseAIResponseForCoins = useCallback(async (aiMessage) => {
-    console.log('🤖 AI Agent: Extracting potential tokens from:', aiMessage)
+    log('🤖 AI Agent: Extracting potential tokens from:', aiMessage)
     
     // SMART TOKEN EXTRACTION - No hardcoded lists!
     const extractPotentialTokens = (text) => {
@@ -333,35 +334,35 @@ export default function Home() {
     
     // Extract all potential token candidates
     const potentialTokens = extractPotentialTokens(aiMessage);
-    console.log('🔍 AI Agent found potential tokens:', potentialTokens);
+    log('🔍 AI Agent found potential tokens:', potentialTokens);
     
     // DYNAMIC API VALIDATION - Test each candidate against CoinStats API
     const validatedTokens = [];
     const maxTokensToTest = 6; // Limit to avoid spam
     const tokensToTest = potentialTokens.slice(0, maxTokensToTest);
     
-    console.log('🧪 AI Agent: Testing tokens against CoinStats API...', tokensToTest);
+    log('🧪 AI Agent: Testing tokens against CoinStats API...', tokensToTest);
     
     // Test each potential token in parallel
     const validationPromises = tokensToTest.map(async (token) => {
       try {
-        console.log(`🔎 Testing token: ${token}`);
+        log(`🔎 Testing token: ${token}`);
         const searchData = await coinstatsService.searchCoins(token);
         
         if (searchData.result && searchData.result.length > 0) {
           const coinData = searchData.result[0]; // Get best match
-          console.log(`✅ Found valid token: ${token} -> ${coinData.name} (${coinData.symbol})`);
+          log(`✅ Found valid token: ${token} -> ${coinData.name} (${coinData.symbol})`);
           return {
             searchTerm: token,
             coinData: coinData,
             isValid: true
           };
         } else {
-          console.log(`❌ Token not found in CoinStats: ${token}`);
+          log(`❌ Token not found in CoinStats: ${token}`);
           return { searchTerm: token, isValid: false };
         }
       } catch (error) {
-        console.log(`⚠️ API error testing token ${token}:`, error);
+        log(`⚠️ API error testing token ${token}:`, error);
         return { searchTerm: token, isValid: false };
       }
     });
@@ -370,14 +371,14 @@ export default function Home() {
     const validationResults = await Promise.all(validationPromises);
     const validTokens = validationResults.filter(result => result.isValid);
     
-    console.log('🎯 AI Agent: Valid tokens found:', validTokens.map(t => `${t.searchTerm} -> ${t.coinData?.name}`));
+    log('🎯 AI Agent: Valid tokens found:', validTokens.map(t => `${t.searchTerm} -> ${t.coinData?.name}`));
     
     // Process each validated token (limit to first 4 to avoid spam)
     const tokensToProcess = validTokens.slice(0, 4);
     
     for (const tokenResult of tokensToProcess) {
       const { searchTerm, coinData } = tokenResult;
-      console.log(`🚀 Creating bubble for validated token: ${searchTerm} -> ${coinData.name}`);
+      log(`🚀 Creating bubble for validated token: ${searchTerm} -> ${coinData.name}`);
       
       // Create CoinStats bubble for this validated token
       const coinName = coinData.name;
@@ -437,7 +438,7 @@ export default function Home() {
   // Handle WebSocket messages
   useEffect(() => {
     const handleMessage = (data) => {
-      console.log('📨 Received message:', data)
+      log('📨 Received message:', data)
       
       if (data.type === 'stream_chunk') {
         setCurrentResponse(prev => prev + (data.data?.text || data.content || ''))
@@ -504,9 +505,9 @@ export default function Home() {
       try {
         const connectionTest = await icpService.testConnection();
         isBackendReachable = connectionTest.success;
-        console.log('🟦 ICP Backend connectivity test:', connectionTest);
+        log('🟦 ICP Backend connectivity test:', connectionTest);
       } catch (error) {
-        console.log('🟦 ICP Backend connectivity test failed:', error);
+        log('🟦 ICP Backend connectivity test failed:', error);
         isBackendReachable = false;
       }
       
@@ -540,12 +541,12 @@ export default function Home() {
     // Create bubble after a short delay to let auth initialize
     const timer = setTimeout(createICPStatusBubble, 1000);
 
-    // Monitor console for ICP errors and update bubble
+    // Monitor console for ICP logErrors and update bubble
     const originalConsoleError = console.error;
     console.error = (...args) => {
       const message = args.join(' ');
       
-      // Check for ICP-related errors
+              // Check for ICP-related errors
       if (message.includes('ICP network not available') || 
           message.includes('ICP Service:') ||
           message.includes('net::ERR_CONNECTION_REFUSED') && message.includes('4943')) {
@@ -573,7 +574,7 @@ export default function Home() {
         });
       }
       
-      // Call original console.error
+      // Call original error
       originalConsoleError.apply(console, args);
     };
     
@@ -593,7 +594,7 @@ export default function Home() {
           const connectionTest = await icpService.testConnection();
           isBackendReachable = connectionTest.success;
         } catch (error) {
-          console.log('🟦 ICP Backend connectivity update test failed:', error);
+          log('🟦 ICP Backend connectivity update test failed:', error);
           isBackendReachable = false;
         }
         
@@ -699,7 +700,7 @@ export default function Home() {
           if (!data || typeof data !== 'object') {
             lurkyText = `${searchedCoin} Social Data\n\nNo data available from Lurky API\n\nTry asking about popular coins like:\n• Bitcoin\n• Ethereum\n• Solana`;
           } else if (data.message) {
-            // Handle API errors/messages
+            // Handle API logErrors/messages
             lurkyText = `${searchedCoin} Social Data\n\n${data.message}\n\n${data.suggestion || 'Try a different coin name'}`;
           } else if (data.coins && Array.isArray(data.coins) && data.coins.length > 0) {
             // Find the coin that matches what user asked for - be more flexible
@@ -1128,7 +1129,7 @@ export default function Home() {
               : bubble
           ))
         } catch (e) {
-          // Update the bubble with error content
+          // Update the bubble with logError content
           setHederaBubbles(prev => prev.map(bubble => 
             bubble.id === hederaBubbleId 
               ? { ...bubble, content: 'Failed to fetch Hedera data from Hgraph API.', loading: false }
@@ -1263,7 +1264,7 @@ export default function Home() {
 
     // Send message to Olivia - new waitForConnection() logic handles everything
     try {
-      console.log('📤 Sending message to Olivia AI...')
+      log('📤 Sending message to Olivia AI...')
       const result = await sendMessage(message)
       
       if (!result) {
@@ -1278,7 +1279,7 @@ export default function Home() {
       // If successful, the WebSocket message handler will take care of the response
       
     } catch (error) {
-      console.error('Failed to send message:', error)
+      logError('Failed to send message:', error)
       setMessages(prev => [...prev, { 
         type: 'ai', 
         content: 'I\'m currently offline, but you can still get crypto data from the bubbles above! Try asking about Bitcoin, Ethereum, or other coins.' 
@@ -1297,7 +1298,7 @@ export default function Home() {
 
   // Auto-initialize the chat on component mount
   useEffect(() => {
-    console.log('🚀 Home.jsx: Auto-initializing chat on mount');
+    log('🚀 Home.jsx: Auto-initializing chat on mount');
     setIsLoading(false) // Don't show loading initially
     setMessages([{
       type: 'ai',
@@ -1313,26 +1314,28 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-6 relative h-full w-full overflow-hidden bg-black">
       
-      {/* WebSocket Status Debug (bottom-right) */}
-      <div className={`fixed bottom-4 right-4 text-white p-2 text-xs z-50 rounded ${
-        isConnected ? 'bg-green-600' : isConnecting ? 'bg-yellow-600' : 'bg-red-600'
-      }`}>
-        {isConnected ? '🟢 AI Connected' : 
-         isConnecting ? `🟡 Connecting... (${connectionAttempts}/10)` : 
-         `🔴 AI Offline`}
-        {import.meta.env.DEV && !isConnected && (
-          <div className="text-[10px] mt-1">
-            Endpoint: {currentEndpointIndex + 1}/{wsEndpoints?.length || 0}
-            <button 
-              onClick={connect}
-              className="ml-2 px-1 py-0.5 bg-blue-600 hover:bg-blue-700 rounded text-[9px]"
-              disabled={isConnecting}
-            >
-              Retry
-            </button>
-          </div>
-        )}
-      </div>
+      {/* WebSocket Status Debug (bottom-right) - Development Only */}
+      {import.meta.env.VITE_NODE === 'development' && (
+        <div className={`fixed bottom-4 right-4 text-white p-2 text-xs z-50 rounded ${
+          isConnected ? 'bg-green-600' : isConnecting ? 'bg-yellow-600' : 'bg-red-600'
+        }`}>
+          {isConnected ? '🟢 AI Connected' : 
+           isConnecting ? `🟡 Connecting... (${connectionAttempts}/10)` : 
+           `🔴 AI Offline`}
+          {!isConnected && (
+            <div className="text-[10px] mt-1">
+              Endpoint: {currentEndpointIndex + 1}/{wsEndpoints?.length || 0}
+              <button 
+                onClick={connect}
+                className="ml-2 px-1 py-0.5 bg-blue-600 hover:bg-blue-700 rounded text-[9px]"
+                disabled={isConnecting}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       
 
       

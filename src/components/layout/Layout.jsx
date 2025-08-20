@@ -5,7 +5,8 @@ import BottomNavigation from './BottomNavigation'
 import WelcomeDrawer from '../ui/WelcomeDrawer'
 import AccountUpgradePrompt from '../ui/AccountUpgradePrompt'
 import { useAuth } from '../../contexts/AuthContext'
-import { useAccountUpgrade } from '../../hooks/useAccountUpgrade'
+import { useAccountUpgrade } from '../../hooks/useAccountUpgrade';
+import { log } from '../../utils/logger.js';
 
 export default function Layout() {
   const [showWelcomeDrawer, setShowWelcomeDrawer] = useState(false)
@@ -35,7 +36,7 @@ export default function Layout() {
     if (import.meta.env.DEV) {
       window.forceUpgradePrompt = forceShowUpgrade;
       if (!window._devHelpersLogged) {
-        console.log('🧪 Dev helper: Use window.forceUpgradePrompt() to test upgrade flow');
+        log('🧪 Dev helper: Use window.forceUpgradePrompt() to test upgrade flow');
         window._devHelpersLogged = true;
       }
     }

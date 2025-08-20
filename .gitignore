@@ -67,3 +67,8 @@ debug
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# ICP/DFX generated files
+# Each developer should deploy their own canisters and get unique IDs
+icp_backend/canister_ids.json
+icp_backend/.dfx/

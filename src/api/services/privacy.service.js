@@ -1,5 +1,6 @@
 import CryptoJS from 'crypto-js';
 import { aiService } from './ai.service.js';
+import { log, error as logError, warn } from '../../utils/logger.js';
 
 /**
  * Privacy Service - Detects sensitive information and handles message hashing
@@ -48,7 +49,7 @@ class PrivacyService {
                 method: 'local_pattern_matching'
             };
 
-            console.log('🔒 Privacy analysis result:', {
+            log('🔒 Privacy analysis result:', {
                 message: message ? message.substring(0, 50) + '...' : 'undefined',
                 isSensitive: result.isSensitive,
                 confidence: result.confidence,
@@ -59,7 +60,7 @@ class PrivacyService {
             return result;
 
         } catch (error) {
-            console.error('🔒 Privacy analysis failed:', error);
+            logError('🔒 Privacy analysis failed:', error);
             // Return safe default - treat as non-sensitive if analysis fails
             return {
                 isSensitive: false,
@@ -79,7 +80,7 @@ class PrivacyService {
     performLocalSensitivityCheck(message) {
         // Handle undefined or null messages
         if (!message || typeof message !== 'string') {
-            console.warn('🔒 Privacy check received invalid message:', message);
+            warn('🔒 Privacy check received invalid message:', message);
             return {
                 isSensitive: false,
                 confidence: 0,
@@ -138,7 +139,7 @@ class PrivacyService {
             return { success: false, error: result.error || 'AI analysis failed' };
 
         } catch (error) {
-            console.error('🔒 AI privacy analysis failed:', error);
+            logError('🔒 AI privacy analysis failed:', error);
             return { success: false, error: error.message };
         }
     }
@@ -170,7 +171,7 @@ class PrivacyService {
                 salt: messageSalt // Store salt to potentially verify later
             };
 
-            console.log('🔒 Message hashed for privacy:', {
+            log('🔒 Message hashed for privacy:', {
                 originalLength: message.length,
                 hashedLength: hashedMessage.length,
                 shortHash: shortHash
@@ -185,7 +186,7 @@ class PrivacyService {
             };
 
         } catch (error) {
-            console.error('🔒 Message hashing failed:', error);
+            logError('🔒 Message hashing failed:', error);
             return {
                 success: false,
                 error: error.message,
@@ -203,7 +204,7 @@ class PrivacyService {
      */
     async processMessages(userMessage, aiResponse, userId = '') {
         try {
-            console.log('🔒 Processing messages through privacy filter...');
+            log('🔒 Processing messages through privacy filter...');
 
             // Analyze both user message and AI response
             const [userAnalysis, aiAnalysis] = await Promise.all([
@@ -224,7 +225,7 @@ class PrivacyService {
                 if (hashResult.success) {
                     processedUserMessage = hashResult.hashedMessage;
                     userMessageHashed = true;
-                    console.log('🔒 User message hashed due to sensitivity:', userAnalysis.reasons);
+                    log('🔒 User message hashed due to sensitivity:', userAnalysis.reasons);
                 }
             }
 
@@ -234,7 +235,7 @@ class PrivacyService {
                 if (hashResult.success) {
                     processedAiResponse = hashResult.hashedMessage;
                     aiResponseHashed = true;
-                    console.log('🔒 AI response hashed due to sensitivity:', aiAnalysis.reasons);
+                    log('🔒 AI response hashed due to sensitivity:', aiAnalysis.reasons);
                 }
             }
 
@@ -252,7 +253,7 @@ class PrivacyService {
             };
 
         } catch (error) {
-            console.error('🔒 Privacy processing failed:', error);
+            logError('🔒 Privacy processing failed:', error);
             // Return original messages if processing fails
             return {
                 success: false,

@@ -1,22 +1,29 @@
-import axiosCoinstats from '../config/axios-coinstats';
+import { OPENAI_MICROSERVICE_CONFIG } from '../config/endpoints.js';
 
 /**
- * CoinStats API Service
- * Full-featured crypto data with API key
+ * CoinStats API Service via Microservice
+ * Full-featured crypto data with API key secured in microservice
  */
 
 export const coinstatsService = {
   // Get coin prices and market data
   async getCoins(limit = 10, page = 1) {
     try {
-      const { data } = await axiosCoinstats.get('/coins', {
-        params: {
-          page,
-          limit,
-          currency: 'USD'
+      const response = await fetch(`${OPENAI_MICROSERVICE_CONFIG.URL}/api/coinstats/coins?page=${page}&limit=${limit}&currency=USD`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_MICROSERVICE_CONFIG.TOKEN}`,
+          'Origin': window.location.origin
         }
       });
-      return data;
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : data;
     } catch (error) {
       console.error('CoinStats coins fetch error:', error);
       throw error;
@@ -26,12 +33,21 @@ export const coinstatsService = {
   // Get specific coin data
   async getCoin(coinId) {
     try {
-      const { data } = await axiosCoinstats.get(`/coins/${coinId}`, {
-        params: {
-          currency: 'USD'
+      const response = await fetch(`${OPENAI_MICROSERVICE_CONFIG.URL}/api/coinstats/coins/${coinId}?currency=USD`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_MICROSERVICE_CONFIG.TOKEN}`,
+          'Origin': window.location.origin
         }
       });
-      return data;
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : data;
     } catch (error) {
       console.error('CoinStats coin fetch error:', error);
       throw error;
@@ -41,14 +57,21 @@ export const coinstatsService = {
   // Get market data overview
   async getMarkets(limit = 50) {
     try {
-      const { data } = await axiosCoinstats.get('/coins', {
-        params: {
-          limit,
-          currency: 'USD',
-          sortBy: 'rank'
+      const response = await fetch(`${OPENAI_MICROSERVICE_CONFIG.URL}/api/coinstats/markets?limit=${limit}&currency=USD&sortBy=rank`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_MICROSERVICE_CONFIG.TOKEN}`,
+          'Origin': window.location.origin
         }
       });
-      return data;
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : data;
     } catch (error) {
       console.error('CoinStats markets fetch error:', error);
       throw error;
@@ -58,109 +81,21 @@ export const coinstatsService = {
   // Get specific coin by ID
   async searchCoins(query) {
     try {
-      // Map common names/symbols to CoinStats IDs
-      const coinMapping = {
-        'bitcoin': 'bitcoin',
-        'btc': 'bitcoin',
-        'ethereum': 'ethereum', 
-        'eth': 'ethereum',
-        'solana': 'solana',
-        'sol': 'solana',
-        'cardano': 'cardano',
-        'ada': 'cardano',
-        'polkadot': 'polkadot',
-        'dot': 'polkadot',
-        'chainlink': 'chainlink',
-        'link': 'chainlink',
-        'polygon': 'polygon',
-        'matic': 'polygon',
-        'avalanche': 'avalanche-2',
-        'avax': 'avalanche-2',
-        'dogecoin': 'dogecoin',
-        'doge': 'dogecoin',
-        'shiba': 'shiba-inu',
-        'shib': 'shiba-inu',
-        'ripple': 'ripple',
-        'xrp': 'ripple',
-        'binance': 'binancecoin',
-        'bnb': 'binancecoin',
-        'tron': 'tron',
-        'trx': 'tron',
-        'uniswap': 'uniswap',
-        'uni': 'uniswap',
-        'cosmos': 'cosmos',
-        'atom': 'cosmos',
-        'near': 'near',
-        'algorand': 'algorand',
-        'algo': 'algorand',
-        'fantom': 'fantom',
-        'ftm': 'fantom',
-        'aave': 'aave',
-        'terra': 'terra-luna',
-        'luna': 'terra-luna',
-        // Popular meme coins and newer tokens
-        'popcat': 'popcat',
-        'bonk': 'bonk',
-        'pepe': 'pepe',
-        'floki': 'floki-inu',
-        'babydoge': 'baby-doge-coin',
-        'safemoon': 'safemoon',
-        'wojak': 'wojak',
-        'chad': 'chad',
-        'mog': 'mog-coin',
-        'brett': 'brett',
-        'wif': 'dogwifhat',
-        'myro': 'myro',
-        'wen': 'wen',
-        'jup': 'jupiter',
-        'jupiter': 'jupiter',
-        'render': 'render-token',
-        'rndr': 'render-token',
-        'kaspa': 'kaspa',
-        'kas': 'kaspa',
-        'injective': 'injective-protocol',
-        'inj': 'injective-protocol',
-        'sei': 'sei-network',
-        'tia': 'celestia',
-        'celestia': 'celestia',
-        'wld': 'worldcoin-wld',
-        'worldcoin': 'worldcoin-wld',
-        'arb': 'arbitrum',
-        'arbitrum': 'arbitrum',
-        'op': 'optimism',
-        'optimism': 'optimism',
-        'blur': 'blur',
-        'ldo': 'lido-dao',
-        'lido': 'lido-dao',
-        'rpl': 'rocket-pool',
-        'rocketpool': 'rocket-pool',
-        // Missing trending coins from AI mentions
-        'cfx': 'conflux-token',
-        'conflux': 'conflux-token',
-        'pudgy': 'pudgy-penguins',
-        'pengu': 'pudgy-penguins',
-        'penguins': 'pudgy-penguins',
-        'ethena': 'ethena',
-        'ena': 'ethena',
-        'curve': 'curve-dao-token',
-        'crv': 'curve-dao-token',
-        'dao': 'curve-dao-token',
-        'omikami': 'omikami',
-        'rize': 'rize',
-        // Internet Computer
-        'icp': 'internet-computer',
-        'internet-computer': 'internet-computer',
-        'dfinity': 'internet-computer'
-      };
-      
-      const coinId = coinMapping[query.toLowerCase()] || query.toLowerCase();
-      
-      const { data } = await axiosCoinstats.get(`/coins/${coinId}`);
-      
-      // Return in expected format
-      return {
-        result: [data.coin || data]
-      };
+      const response = await fetch(`${OPENAI_MICROSERVICE_CONFIG.URL}/api/coinstats/search?query=${encodeURIComponent(query)}&currency=USD`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_MICROSERVICE_CONFIG.TOKEN}`,
+          'Origin': window.location.origin
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : data;
     } catch (error) {
       console.error('CoinStats coin fetch error:', error);
       throw error;
@@ -170,17 +105,21 @@ export const coinstatsService = {
   // Get portfolio insights
   async getPortfolioInsights() {
     try {
-      // This would require user portfolio data - placeholder for now
-      const { data } = await axiosCoinstats.get('/coins', {
-        params: {
-          limit: 5,
-          sortBy: 'marketCap'
+      const response = await fetch(`${OPENAI_MICROSERVICE_CONFIG.URL}/api/coinstats/portfolio-insights?limit=5&sortBy=marketCap`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_MICROSERVICE_CONFIG.TOKEN}`,
+          'Origin': window.location.origin
         }
       });
-      return {
-        topCoins: data.result || data,
-        totalMarketCap: data.result?.reduce((sum, coin) => sum + (coin.marketCap || 0), 0) || 0
-      };
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : data;
     } catch (error) {
       console.error('CoinStats portfolio insights error:', error);
       throw error;

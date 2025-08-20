@@ -192,14 +192,10 @@ export const createProfileSettingsUser = async (settingsData) => {
   }
 };
 
+// Airdrop functionality removed - endpoint deprecated
 export const airdropWalletUpdate = async (telegram_id, updateData) => {
-  try {
-    const response = await axiosInstanceAPIGateway.post(ENDPOINTS.AIRDROP.UPDATE_AIRDROP_WALLET.replace(":tg_id", telegram_id), updateData);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating airdrop wallet:', error);
-    throw error;
-  }
+  console.warn('Airdrop functionality has been deprecated');
+  return { success: false, message: 'Airdrop functionality deprecated' };
 };
 
 export const createDefaultGalaxyInstance = (userId, walletAddress) => ({

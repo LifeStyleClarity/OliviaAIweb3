@@ -1,10 +1,8 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import LandingPage from './pages/LandingPage';
-import Tests from './pages/Tests';
-import ICPSetup from './pages/ICPSetup';
+
 import Layout from './components/layout/Layout';
 import { PrivateRoute, PublicRoute } from './components/auth/RouteGuards';
 import { useState, useEffect } from 'react';
@@ -65,20 +63,17 @@ function App() {
                 </PublicRoute>
               }
             />
-            <Route
-              path="/icp-setup"
-              element={
-                <PublicRoute>
-                  <ICPSetup />
-                </PublicRoute>
-              }
-            />
-            <Route path="/tests" element={<Tests />} />
+
+
             <Route element={<PrivateRoute />}>
               <Route element={<Layout />}>
                 <Route path="/home" element={<Home />} />
               </Route>
             </Route>
+
+            {/* Catch-all route for deleted/unknown pages */}
+            <Route path="/icp-setup" element={<Navigate to="/home" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </>
         )}
       </Routes>

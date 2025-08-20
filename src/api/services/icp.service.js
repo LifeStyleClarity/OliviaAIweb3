@@ -1,8 +1,9 @@
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
+import { log, error } from '../../utils/logger.js';
 
 // Canister ID from your deployment
-const CANISTER_ID = 'uxrrr-q7777-77774-qaaaq-cai';
+const CANISTER_ID = import.meta.env.VITE_ICP_CANISTER_ID || 'umunu-kh777-77774-qaaca-cai';
 
 // Local development host
 const HOST = 'http://localhost:4943';
@@ -76,9 +77,9 @@ const createAgent = async (identity = null) => {
       // Use provided identity if available (Internet Identity)
       if (identity) {
         agentOptions.identity = identity;
-        console.log('🟦 Creating ICP Agent with Internet Identity');
+        log('🟦 Creating ICP Agent with Internet Identity');
       } else {
-        console.log('🟦 Creating ICP Agent with anonymous identity');
+        log('🟦 Creating ICP Agent with anonymous identity');
       }
       
       const newAgent = new HttpAgent(agentOptions);
@@ -105,13 +106,13 @@ const createAgent = async (identity = null) => {
         agent = newAgent; // Store anonymous agent only if none exists
       }
       
-      console.log('🟦 ICP Agent created successfully');
+      log('🟦 ICP Agent created successfully');
       return newAgent;
     } catch (error) {
       if (import.meta.env.DEV) {
         console.warn('🟦 ICP agent connection failed (development mode):', error.message);
       } else {
-        console.error('🟦 Failed to create ICP agent:', error);
+        error('🟦 Failed to create ICP agent:', error);
       }
       throw error;
     }
@@ -147,7 +148,7 @@ export const icpService = {
     agent = null;
     actor = null;
     this._currentIdentity = identity;
-    console.log('🟦 Internet Identity set for ICP service');
+    log('🟦 Internet Identity set for ICP service');
   },
 
   // Test connection
@@ -169,7 +170,7 @@ export const icpService = {
       const result = await actorInstance.greet('Frontend');
       return { success: true, message: result };
     } catch (error) {
-      console.error('ICP connection test failed:', error);
+      error('ICP connection test failed:', error);
       return { success: false, error: error.message };
     }
   },
@@ -186,7 +187,7 @@ export const icpService = {
         return { success: false, error: result.err };
       }
     } catch (error) {
-      console.error('Create user failed:', error);
+      error('Create user failed:', error);
       return { success: false, error: error.message };
     }
   },
@@ -202,7 +203,7 @@ export const icpService = {
         return { success: false, error: result.err };
       }
     } catch (error) {
-      console.error('Create guest user failed:', error);
+      error('Create guest user failed:', error);
       return { success: false, error: error.message };
     }
   },
@@ -218,7 +219,7 @@ export const icpService = {
         return { success: false, error: result.err };
       }
     } catch (error) {
-      console.error('Get user failed:', error);
+      error('Get user failed:', error);
       return { success: false, error: error.message };
     }
   },
@@ -226,7 +227,7 @@ export const icpService = {
   // Chat storage
   async saveMessage(messageId, userMessage, aiResponse, conversationId, searchEnabled = false, imageEnabled = false) {
     try {
-      console.log('🟦 ICP Service: saveMessage called', { messageId, conversationId, hasIdentity: !!this._currentIdentity });
+      log('🟦 ICP Service: saveMessage called', { messageId, conversationId, hasIdentity: !!this._currentIdentity });
       
       // Use the current identity for authentication
       const actorInstance = await createActor(this._currentIdentity);
@@ -239,7 +240,7 @@ export const icpService = {
         imageEnabled
       );
       
-      console.log('🟦 ICP Service: saveMessage canister response', result);
+      log('🟦 ICP Service: saveMessage canister response', result);
       
       if ('ok' in result) {
         return { success: true, message: result.ok };
@@ -247,7 +248,7 @@ export const icpService = {
         return { success: false, error: result.err };
       }
     } catch (error) {
-      console.error('🟦 ICP Service: Save message failed:', error);
+      error('🟦 ICP Service: Save message failed:', error);
       return { success: false, error: error.message };
     }
   },
@@ -263,7 +264,7 @@ export const icpService = {
         return { success: false, error: result.err };
       }
     } catch (error) {
-      console.error('Get user messages failed:', error);
+      error('Get user messages failed:', error);
       return { success: false, error: error.message };
     }
   },
@@ -279,7 +280,7 @@ export const icpService = {
         return { success: false, error: result.err };
       }
     } catch (error) {
-      console.error('Get conversation messages failed:', error);
+      error('Get conversation messages failed:', error);
       return { success: false, error: error.message };
     }
   },
@@ -295,7 +296,7 @@ export const icpService = {
         return { success: false, error: result.err };
       }
     } catch (error) {
-      console.error('Search messages failed:', error);
+      error('Search messages failed:', error);
       return { success: false, error: error.message };
     }
   },
@@ -307,7 +308,7 @@ export const icpService = {
       const count = await actorInstance.getMessageCount();
       return { success: true, count: Number(count) };
     } catch (error) {
-      console.error('Get message count failed:', error);
+      error('Get message count failed:', error);
       return { success: false, error: error.message };
     }
   },
@@ -318,7 +319,7 @@ export const icpService = {
       const count = await actorInstance.getUserCount();
       return { success: true, count: Number(count) };
     } catch (error) {
-      console.error('Get user count failed:', error);
+      error('Get user count failed:', error);
       return { success: false, error: error.message };
     }
   },
@@ -335,7 +336,7 @@ export const icpService = {
         canUpgrade
       };
     } catch (error) {
-      console.error('Can upgrade account failed:', error);
+      error('Can upgrade account failed:', error);
       return {
         success: false,
         error: error.message
@@ -361,7 +362,7 @@ export const icpService = {
         migratedMessages: Number(result.migratedMessages)
       };
     } catch (error) {
-      console.error('Upgrade guest to permanent failed:', error);
+      error('Upgrade guest to permanent failed:', error);
       return {
         success: false,
         error: error.message
@@ -382,7 +383,7 @@ export const icpService = {
         migratedMessages: Number(result.migratedMessages)
       };
     } catch (error) {
-      console.error('Link account to Internet Identity failed:', error);
+      error('Link account to Internet Identity failed:', error);
       return {
         success: false,
         error: error.message

@@ -287,10 +287,10 @@ const FloatingLurkyBubble = ({ isOpen, onClose, title = 'Lurky', content = '', l
                   
                   {/* Central content area - spherical text flow */}
                   <div className="flex-1 flex items-center justify-center mt-20 mb-4 max-w-full overflow-hidden">
-                    <div className="text-center max-h-full overflow-auto px-3">
+                    <div className="text-center px-3">
                       {typeof content === 'string' ? (
                         <ReactMarkdown 
-                          className="prose prose-invert prose-sm max-w-none prose-p:text-white/90 prose-p:text-sm prose-p:leading-relaxed prose-p:my-2 prose-pre:text-xs prose-pre:bg-black/30 prose-pre:p-2 prose-pre:rounded prose-pre:text-green-300 prose-pre:border prose-pre:border-green-400/30 prose-strong:text-green-300 prose-em:text-green-200 prose-p:text-center"
+                          className="prose prose-xs max-w-none prose-p:text-white prose-p:text-xs prose-p:leading-relaxed prose-p:my-2 prose-p:font-medium prose-pre:text-xs prose-pre:bg-black/30 prose-pre:p-2 prose-pre:rounded prose-pre:text-green-300 prose-pre:border prose-pre:border-green-400/30 prose-strong:text-green-300 prose-em:text-green-200 prose-p:text-center prose-p:drop-shadow-lg prose-headings:text-white prose-li:text-white prose-a:text-white"
                         >
                           {content}
                         </ReactMarkdown>

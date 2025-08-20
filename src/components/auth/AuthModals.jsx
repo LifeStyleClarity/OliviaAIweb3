@@ -1,6 +1,6 @@
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Spinner } from '@heroui/react';
 import PropTypes from 'prop-types';
-import RadioAggregate from '../AgreggateRadios';
+
 import { MODAL_MESSAGES } from '../../auth/constants';
 
 AuthModals.propTypes = {
@@ -89,12 +89,9 @@ export default function AuthModals({
                 Do you want to aggregate them all to this wallet? If not click cancel and connect the desired wallet
               </p>
               {wallet && (
-                <RadioAggregate
-                  setWalletSelected={setWalletSelected}
-                  wallet={wallet.account.address}
-                  allUsers={allUserLogins}
-                  shortenPublicKey={shortenPublicKey}
-                />
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Wallet: {wallet.account.address.slice(0, 6)}...{wallet.account.address.slice(-4)}</p>
+                </div>
               )}
             </>
           ),
@@ -152,12 +149,9 @@ export default function AuthModals({
                   }? If not click cancel and connect the desired wallet`}
               </p>
               {wallet && (
-                <RadioAggregate
-                  setWalletSelected={setWalletSelected}
-                  wallet={String(wallet.account.address)}
-                  allUsers={allUserLogins}
-                  shortenPublicKey={shortenPublicKey}
-                />
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Wallet: {String(wallet.account.address).slice(0, 6)}...{String(wallet.account.address).slice(-4)}</p>
+                </div>
               )}
             </>
           ),
